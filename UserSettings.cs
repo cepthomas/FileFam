@@ -4,12 +4,12 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Text.Json.Serialization;
 using System.Drawing.Design;
-using NBagOfTricks;
-using NBagOfUis;
-using NBagOfTricks.Slog;
+using Ephemera.NBagOfTricks;
+using Ephemera.NBagOfUis;
+using Ephemera.NBagOfTricks.Slog;
 
 
-namespace Notr
+namespace Ephemera.Notr
 {
     [Serializable]
     public sealed class UserSettings : SettingsCore

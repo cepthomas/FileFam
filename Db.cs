@@ -5,9 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Data.SQLite;
-using NBagOfTricks.Slog;
+using Ephemera.NBagOfTricks.Slog;
 
-namespace Notr
+
+namespace Ephemera.Notr
 {
     //SQLite database files are commonly used as containers to transfer rich content between systems and as a long-term archival
     //format for data.SQLite uses dynamic types for tables.It means you can store any value in any column, regardless of

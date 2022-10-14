@@ -6,12 +6,12 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Diagnostics;
-using NBagOfTricks;
-using NBagOfTricks.Slog;
-using NBagOfUis;
+using Ephemera.NBagOfTricks;
+using Ephemera.NBagOfTricks.Slog;
+using Ephemera.NBagOfUis;
 
 
-namespace Notr
+namespace Ephemera.Notr
 {
     public partial class MainForm : Form
     {
@@ -27,10 +27,10 @@ namespace Notr
         #endregion
 
 
-        /// <summary>Supported types.</summary>
+        /// <summary>Supported types.</summary> // TODO1 put in settings
         public const string NOTR_FILE_TYPES = "*.ntr";
-        public const string EDITOR_FILE_TYPES = "*.txt;*.csv;*.json;*.c;*.c++;*.cs;*.h";
-        public const string APP_FILE_TYPES = "*.doc;*.xsl;*.xslx;*.pdf";
+        public const string EDITOR_FILE_TYPES = "*.txt;*.csv;*.json;*.c;*.cpp;*.cs;*.h";
+        public const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";
 
         //    @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages", // TODO1 hide some but not others
 

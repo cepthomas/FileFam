@@ -1,4 +1,4 @@
-﻿namespace Notr
+﻿namespace Ephemera.Notr
 {
     partial class MainForm
     {
