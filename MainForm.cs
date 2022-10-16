@@ -11,6 +11,19 @@ using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 
 
+// - Locs of ntr files.
+// - Locs of other files to index for search and link.
+// 
+// - List of documents with tags. Use Filtree + tags.
+// - Types: code, ntr, doc, csv, json, xsl, pdf, ...
+// - opt: Open file as ntr.
+// - Apply tags to files or directories.
+// - Edit list of tags. Or just keywords.
+// - Store - sqlite or basic serialization.
+// - Search on file name, tags, date, ...
+// - xl features? OARS3\Source\Business\QueryToolDlg, AnalysisPOCScan\AnalysisFormPOCScan, \DisplayControls\Table
+
+
 namespace Ephemera.Notr
 {
     public partial class MainForm : Form
@@ -22,23 +35,23 @@ namespace Ephemera.Notr
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
-        ///// <summary>UI indicator.</summary>
-        //const string DIRTY_FILE_IND = "*";
+
+        /// <summary>Data store.</summary>
+        Db _db = new();
         #endregion
 
-
         /// <summary>Supported types.</summary> // TODO1 put in settings
-        public const string NOTR_FILE_TYPES = "*.ntr";
-        public const string EDITOR_FILE_TYPES = "*.txt;*.csv;*.json;*.c;*.cpp;*.cs;*.h";
-        public const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";
-
-        //    @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages", // TODO1 hide some but not others
+        const string NOTR_FILE_TYPES = "*.ntr";
+        const string EDITOR_FILE_TYPES = "*.txt;*.csv;*.json;*.c;*.cpp;*.cs;*.h";
+        const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";
 
         #region Types
-
         #endregion
 
         #region Lifecycle
+        /// <summary>
+        /// 
+        /// </summary>
         public MainForm()
         {
             // Must do this first before initializing.
@@ -84,11 +97,14 @@ namespace Ephemera.Notr
             AboutMenuItem.Click += (_, __) => MiscUtils.ShowReadme("Notr");
             SettingsMenuItem.Click += (_, __) => EditSettings();
 
+            // The db.
+            _db = Db.Load(appDir);
+
             UpdateUi();
 
             Text = $"Notr {MiscUtils.GetVersionString()}";
 
-            btnDB.Click += (_, __) => { Db dt = new(); dt.DoAll(); };
+            btnDB.Click += (_, __) => { _db.FillFake(); _db.Save(); };
         }
 
         /// <summary>
@@ -124,8 +140,6 @@ namespace Ephemera.Notr
             {
                 components.Dispose();
             }
-
-            // >>> My stuff here.
 
             base.Dispose(disposing);
         }
