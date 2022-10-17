@@ -39,7 +39,7 @@
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.ftree = new NBagOfUis.FilTree();
+            this.filTree = new NBagOfUis.FilTree();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusInfo = new System.Windows.Forms.ToolStripStatusLabel();
             this.tvLog = new NBagOfUis.TextViewer();
@@ -197,17 +197,17 @@
             this.toolStripSeparator9.Name = "toolStripSeparator9";
             this.toolStripSeparator9.Size = new System.Drawing.Size(6, 43);
             // 
-            // ftree
+            // filTree
             // 
-            this.ftree.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.filTree.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.ftree.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.ftree.Location = new System.Drawing.Point(0, 60);
-            this.ftree.Margin = new System.Windows.Forms.Padding(3, 5, 3, 5);
-            this.ftree.Name = "ftree";
-            this.ftree.Size = new System.Drawing.Size(435, 475);
-            this.ftree.TabIndex = 89;
-            this.toolTip.SetToolTip(this.ftree, "File selection");
+            this.filTree.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.filTree.Location = new System.Drawing.Point(0, 60);
+            this.filTree.Margin = new System.Windows.Forms.Padding(3, 5, 3, 5);
+            this.filTree.Name = "filTree";
+            this.filTree.Size = new System.Drawing.Size(435, 475);
+            this.filTree.TabIndex = 89;
+            this.toolTip.SetToolTip(this.filTree, "File selection");
             // 
             // statusStrip
             // 
@@ -250,7 +250,7 @@
             this.Controls.Add(this.ToolStrip);
             this.Controls.Add(this.MenuStrip);
             this.Controls.Add(this.tvLog);
-            this.Controls.Add(this.ftree);
+            this.Controls.Add(this.filTree);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.MenuStrip;
             this.Name = "MainForm";
@@ -274,7 +274,7 @@
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel statusInfo;
 
-        private NBagOfUis.FilTree ftree;
+        private NBagOfUis.FilTree filTree;
         private NBagOfUis.TextViewer tvLog;
 
         private System.Windows.Forms.ToolStripMenuItem FileMenuItem;

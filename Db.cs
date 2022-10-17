@@ -7,36 +7,76 @@ using System.Diagnostics;
 using System.Data.SQLite;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfTricks;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Ephemera.Notr
 {
 
     [Serializable]
-    public sealed class Db : SettingsCore
+    public sealed class Db
     {
+        string _fp = "???";
+
+        [Serializable]
+        public sealed class Entry
+        {
+            public string Path { get; set; } = "???";
+            public bool IsDir { get; set; } = false;
+            public List<string> Tags { get; set; } = new();
+        }
+
         /// <summary>The records.</summary>
         public List<Entry> Entries { get; set; } = new();
 
         /// <summary>Cache.</summary>
+        [JsonIgnore]
         public HashSet<string> AllTags { get; set; } = new();
 
         /// <summary>
         /// Load.
         /// </summary>
-        /// <param name="appDir"></param>
+        /// <param name="appDir">Where the file lives.</param>
         /// <returns></returns>
         public static Db Load(string appDir)
         {
-            Db db = (Db)SettingsCore.Load(appDir, typeof(Db), "db.json");
+            Db? db = null;
 
-            foreach (var entry in db.Entries)
+            string fp = Path.Combine(appDir, "db.json");
+            if (File.Exists(fp))
             {
-                entry.Tags.ForEach(t => db.AllTags.Add(t));
+                JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
+                string json = File.ReadAllText(fp);
+                db = (Db?)JsonSerializer.Deserialize(json, typeof(Db), opts);
             }
 
-            return db;
+            if (db is null)
+            {
+                // Doesn't exist, create a new one.
+                db = new();
+            }
+            else
+            {
+                foreach (var entry in db.Entries)
+                {
+                    entry.Tags.ForEach(t => db.AllTags.Add(t));
+                }
+            }
+
+            db._fp = fp;
+            return db!;
         }
 
+        /// <summary>
+        /// Save object to file.
+        /// </summary>
+        public void Save()
+        {
+            JsonSerializerOptions opts = new() { WriteIndented = true };
+            string json = JsonSerializer.Serialize(this, typeof(Db), opts);
+            File.WriteAllText(_fp, json);
+        }
 
         /// <summary>
         /// 
@@ -60,13 +100,5 @@ namespace Ephemera.Notr
                 Entries.Add(e);
             }
         }
-    }
-
-    [Serializable]
-    public sealed class Entry
-    {
-        public string Path { get; set; } = "???";
-        public bool IsDir { get; set; } = false;
-        public List<string> Tags { get; set; } = new();
     }
 }

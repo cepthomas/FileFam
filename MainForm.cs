@@ -13,15 +13,17 @@ using Ephemera.NBagOfUis;
 
 // - Locs of ntr files.
 // - Locs of other files to index for search and link.
-// 
 // - List of documents with tags. Use Filtree + tags.
-// - Types: code, ntr, doc, csv, json, xsl, pdf, ...
-// - opt: Open file as ntr.
+// ? Open text file as ntr.
 // - Apply tags to files or directories.
 // - Edit list of tags. Or just keywords.
-// - Store - sqlite or basic serialization.
 // - Search on file name, tags, date, ...
-// - xl features? OARS3\Source\Business\QueryToolDlg, AnalysisPOCScan\AnalysisFormPOCScan, \DisplayControls\Table
+
+
+
+// const string NOTR_FILE_TYPES = "*.ntr";
+// const string EDITOR_FILE_TYPES = "*.txt;*.csv;*.json;*.c;*.cpp;*.cs;*.h";
+// const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";
 
 
 namespace Ephemera.Notr
@@ -35,22 +37,13 @@ namespace Ephemera.Notr
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
-
         /// <summary>Data store.</summary>
         Db _db = new();
         #endregion
 
-        /// <summary>Supported types.</summary> // TODO1 put in settings
-        const string NOTR_FILE_TYPES = "*.ntr";
-        const string EDITOR_FILE_TYPES = "*.txt;*.csv;*.json;*.c;*.cpp;*.cs;*.h";
-        const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";
-
-        #region Types
-        #endregion
-
         #region Lifecycle
         /// <summary>
-        /// 
+        /// Constructor.
         /// </summary>
         public MainForm()
         {
@@ -81,12 +74,15 @@ namespace Ephemera.Notr
             // Other UI items.
             ToolStrip.Renderer = new NBagOfUis.CheckBoxRenderer() { SelectedColor = _settings.ControlColor };
 
-            // Bind some filtree stuff.
-            ftree.Settings = _settings.FilTreeSettings;
-            ftree.RecentFiles = _settings.RecentFiles;
-            //ftree.Settings.RootDirs = paths;
-            ftree.Init();
-            ftree.FileSelectedEvent += Navigator_FileSelectedEvent;
+            // FilTree settings.
+            filTree.RootDirs = _settings.RootDirs;
+            filTree.FilterExts = _settings.FilterExts;
+            filTree.IgnoreDirs = _settings.IgnoreDirs;
+            filTree.SplitterPosition = _settings.SplitterPosition;
+            filTree.SingleClickSelect = _settings.SingleClickSelect;
+            filTree.RecentFiles = _settings.RecentFiles;
+            filTree.Init();
+            filTree.FileSelectedEvent += Navigator_FileSelectedEvent;
 
             // File handling.
             OpenMenuItem.Click += (_, __) => Open_Click();
@@ -114,7 +110,7 @@ namespace Ephemera.Notr
         protected override void OnLoad(EventArgs e)
         {
             // Initialize tree from user settings.
-            InitNavigator();
+            //InitNavigator();
 
             base.OnLoad(e);
         }
@@ -215,7 +211,7 @@ namespace Ephemera.Notr
 
                 if (ok)
                 {
-                    _settings.RecentFiles.UpdateMru(fn);
+                    _settings.UpdateMru(fn);
                 }
             }
             catch (Exception ex)
@@ -245,29 +241,7 @@ namespace Ephemera.Notr
 
         #region Navigator
         /// <summary>
-        /// Initialize tree from user settings.
-        /// </summary>
-        void InitNavigator()
-        {
-            ftree.Settings.FilterExts.Clear();
-            ftree.Settings.FilterExts.AddRange(NOTR_FILE_TYPES.SplitByTokens(";*"));
-            ftree.Settings.FilterExts.AddRange(EDITOR_FILE_TYPES.SplitByTokens(";*"));
-            ftree.Settings.FilterExts.AddRange(APP_FILE_TYPES.SplitByTokens(";*"));
-
-            //like: var fileTypes = $"Audio Files|{AudioLibDefs.AUDIO_FILE_TYPES}|Midi Files|{MidiLibDefs.MIDI_FILE_TYPES}|Style Files|{MidiLibDefs.STYLE_FILE_TYPES}";
-
-            try
-            {
-                ftree.Init();
-            }
-            catch (DirectoryNotFoundException)
-            {
-                _logger.Warn("No tree directories");
-            }
-        }
-
-        /// <summary>
-        /// Tree has selected a file to play.
+        /// Tree has selected a file.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="fn"></param>
@@ -285,38 +259,33 @@ namespace Ephemera.Notr
         {
             var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
 
-            //// Detect changes of interest.
-            //bool navChange = false;
-            //bool restart = false;
+            //// Detect changes of interest. Lists are ref bound so already updated.
+            bool restart = false;
 
-            //foreach (var (name, cat) in changes)
-            //{
-            //    switch(name)
-            //    {
-            //        case "WavOutDevice":
-            //        case "Latency":
-            //        case "ControlColor":
-            //        case "WaveColor":
-            //        case "FileLogLevel":
-            //        case "NotifLogLevel":
-            //            restart = true;
-            //            break;
+            foreach (var (name, cat) in changes)
+            {
+                switch (name)
+                {
+                    case "ControlColor":
+                    case "FileLogLevel":
+                    case "NotifLogLevel":
+                        restart = true;
+                        break;
 
-            //        case "RootDirs":
-            //            navChange = true;
-            //            break;
-            //    }
-            //}
+                    case "SingleClickSelect":
+                        filTree.SingleClickSelect = _settings.SingleClickSelect;
+                        break;
 
-            //if (restart)
-            //{
-            //    MessageBox.Show("Restart required for device changes to take effect");
-            //}
+                    case "SplitterPosition":
+                        filTree.SplitterPosition = _settings.SplitterPosition;
+                        break;
+                }
+            }
 
-            //if (navChange)
-            //{
-            //    InitNavigator();
-            //}
+            if (restart)
+            {
+                MessageBox.Show("Restart required for device changes to take effect");
+            }
 
             SaveSettings();
         }
