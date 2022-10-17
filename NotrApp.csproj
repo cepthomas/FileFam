@@ -6,10 +6,10 @@
         <UseWindowsForms>true</UseWindowsForms>
         <Version>$([System.DateTime]::UtcNow.ToString(yy.MM.dd))</Version>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Description>Notr</Description>
+        <Description>Notr App</Description>
         <Copyright>MIT License</Copyright>
-        <RootNamespace>Ephemera.Notr</RootNamespace>
-        <AssemblyName>Ephemera.Notr</AssemblyName>
+        <RootNamespace>Ephemera.NotrApp</RootNamespace>
+        <AssemblyName>Ephemera.NotrApp</AssemblyName>
         <OutputPath>bin\</OutputPath>
         <!-- <DefineConstants>DEBUG;TRACE</DefineConstants> -->
         <WarningLevel>4</WarningLevel>

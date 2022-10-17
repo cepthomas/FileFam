@@ -1,5 +1,5 @@
 
-# Notr
+# NotrApp
 
 # UI
 

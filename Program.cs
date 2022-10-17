@@ -5,7 +5,7 @@ using System.IO;
 using System.Windows.Forms;
 
 
-namespace Ephemera.Notr
+namespace Ephemera.NotrApp
 {
     static class Program
     {

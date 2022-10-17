@@ -26,7 +26,7 @@ using Ephemera.NBagOfUis;
 // const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";
 
 
-namespace Ephemera.Notr
+namespace Ephemera.NotrApp
 {
     public partial class MainForm : Form
     {
@@ -48,7 +48,7 @@ namespace Ephemera.Notr
         public MainForm()
         {
             // Must do this first before initializing.
-            string appDir = MiscUtils.GetAppDataDir("Notr", "Ephemera");
+            string appDir = MiscUtils.GetAppDataDir("NotrApp", "Ephemera");
             _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));
 
             InitializeComponent();
@@ -90,7 +90,7 @@ namespace Ephemera.Notr
             FileMenuItem.DropDownOpening += File_DropDownOpening;
 
             // Tools.
-            AboutMenuItem.Click += (_, __) => MiscUtils.ShowReadme("Notr");
+            AboutMenuItem.Click += (_, __) => MiscUtils.ShowReadme("NotrApp");
             SettingsMenuItem.Click += (_, __) => EditSettings();
 
             // The db.
@@ -98,7 +98,7 @@ namespace Ephemera.Notr
 
             UpdateUi();
 
-            Text = $"Notr {MiscUtils.GetVersionString()}";
+            Text = $"NotrApp {MiscUtils.GetVersionString()}";
 
             btnDB.Click += (_, __) => { _db.FillFake(); _db.Save(); };
         }
