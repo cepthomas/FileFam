@@ -5,17 +5,18 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Data.SQLite;
-using Ephemera.NBagOfTricks.Slog;
-using Ephemera.NBagOfTricks;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Ephemera.NBagOfTricks.Slog;
+using Ephemera.NBagOfTricks;
+
 
 namespace Ephemera.NotrApp
 {
 
     [Serializable]
-    public sealed class Db
+    public sealed class Db //TODO1 in filtree
     {
         string _fp = "???";
 

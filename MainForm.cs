@@ -11,16 +11,6 @@ using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 
 
-// - Locs of ntr files.
-// - Locs of other files to index for search and link.
-// - List of documents with tags. Use Filtree + tags.
-// ? Open text file as ntr.
-// - Apply tags to files or directories.
-// - Edit list of tags. Or just keywords.
-// - Search on file name, tags, date, ...
-
-
-
 // const string NOTR_FILE_TYPES = "*.ntr";
 // const string EDITOR_FILE_TYPES = "*.txt;*.csv;*.json;*.c;*.cpp;*.cs;*.h";
 // const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";

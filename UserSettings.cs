@@ -7,6 +7,7 @@ using System.Drawing.Design;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
 using Ephemera.NBagOfTricks.Slog;
+using System.ComponentModel.DataAnnotations;
 
 
 namespace Ephemera.NotrApp
@@ -67,6 +68,7 @@ namespace Ephemera.NotrApp
 
         #region Persisted Non-editable Persisted Properties
         [Browsable(false)]
+        [Range(10, 80)]
         public int SplitterPosition { get; set; } = 30;
         #endregion
     }
