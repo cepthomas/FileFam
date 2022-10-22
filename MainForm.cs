@@ -16,6 +16,11 @@ using Ephemera.NBagOfUis;
 // const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";
 
 
+// TODO1 these:
+// - Apply tags (new ok) to files or dirs. if dir adds/removes => all files in dir.
+// - Filter: tags, file/dir name (wildcards).
+
+
 namespace Ephemera.NotrApp
 {
     public partial class MainForm : Form
