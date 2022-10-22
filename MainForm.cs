@@ -76,7 +76,7 @@ namespace Ephemera.NotrApp
             filTree.SplitterPosition = _settings.SplitterPosition;
             filTree.SingleClickSelect = _settings.SingleClickSelect;
             filTree.RecentFiles = _settings.RecentFiles;
-            filTree.Init();
+            filTree.InitTree();
             filTree.FileSelectedEvent += Navigator_FileSelectedEvent;
 
             // File handling.
@@ -89,7 +89,8 @@ namespace Ephemera.NotrApp
             SettingsMenuItem.Click += (_, __) => EditSettings();
 
             // The db.
-            _db = Db.Load(appDir);
+            _db = new();
+            //_db.Load("TODO1");
 
             UpdateUi();
 

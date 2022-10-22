@@ -39,7 +39,7 @@
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.filTree = new NBagOfUis.FilTree();
+            this.filTree = new FilTreeTemp();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusInfo = new System.Windows.Forms.ToolStripStatusLabel();
             this.tvLog = new NBagOfUis.TextViewer();
@@ -274,7 +274,7 @@
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel statusInfo;
 
-        private NBagOfUis.FilTree filTree;
+        private FilTreeTemp filTree;
         private NBagOfUis.TextViewer tvLog;
 
         private System.Windows.Forms.ToolStripMenuItem FileMenuItem;
