@@ -11,11 +11,36 @@ using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfTricks;
 
 
+
 namespace Ephemera.NotrApp
 {
     /// <summary>The persisted record template.</summary>
     [Serializable]
-    public record TrackedEntity(string Path, bool IsDir, List<string> Tags);
+    //public record TrackedFile(string FullName, string Id, string Info, string Tags);
+    //public record TrackedEntity(string FullName, string Id, string Info, List<string> Tags);
+    // public record TrackedEntity(string Path, bool IsDir, List<string> Tags);
+
+    public class TrackedFile
+    {
+        public string FullName { get; set; } = "???";
+        public string Id { get; set; } = "???";
+        public string Info { get; set; } = "???";
+        public string Tags { get; set; } = "???";
+
+        public TrackedFile()
+        {
+        }
+
+        public TrackedFile(string fullName, string id, string info, string tags)
+        {
+            FullName = fullName;
+            Id = id;
+            Info = info;
+            Tags = tags;
+        }
+    }
+
+    //Name, FullName
 
     /// <summary>
     /// Storage for tracked files and tags. Could be sqlite also.
@@ -26,16 +51,18 @@ namespace Ephemera.NotrApp
         /// <summary>The filename if available.</summary>
         string _fn = "";
 
-        /// <summary>The records. Key is file path.</summary>
-        readonly Dictionary<string, TrackedEntity> _entities = new();
+        ///// <summary>The records. Key is file path.</summary>
+        //readonly Dictionary<string, TrackedFile> _files = new();
+
+        public List<TrackedFile> Files { get; set; } = new();
 
         /// <summary>Cache - not persisted.</summary>
-        readonly HashSet<string> _allTags = new();
+        readonly List<string> _allTags = new();
         #endregion
 
         #region Lifecycle
         /// <summary>
-        /// Load from file.
+        /// Load db from file.
         /// </summary>
         /// <param name="fn">Where the data lives.</param>
         /// <returns></returns>
@@ -43,14 +70,15 @@ namespace Ephemera.NotrApp
         {
             JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
             string json = File.ReadAllText(fn);
-            var records = (List<TrackedEntity>)JsonSerializer.Deserialize(json, typeof(List<TrackedEntity>), opts)!;
+            var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
 
-            _allTags.Clear();
             foreach (var rec in records)
             {
-                _entities.Add(rec.Path, rec);
-                rec.Tags.ForEach(t => _allTags.Add(t));
+   //             _files.Add(rec.FullName, rec);
+                Files.Add(rec);
             }
+
+            UpdateTags();
 
             _fn = fn;
         }
@@ -62,77 +90,122 @@ namespace Ephemera.NotrApp
         public void Save(string fn = "")
         {
             _fn = fn == "" ? _fn : fn;
-            JsonSerializerOptions opts = new() { WriteIndented = false };
-            var recs = _entities.Values.ToList();
-            string json = JsonSerializer.Serialize(recs, typeof(List<TrackedEntity>), opts);
+            JsonSerializerOptions opts = new() { WriteIndented = true }; // TODO1 indent for debug only.
+            var recs = Files;
+            string json = JsonSerializer.Serialize(recs, typeof(List<TrackedFile>), opts);
             File.WriteAllText(_fn, json);
         }
         #endregion
 
         #region Public API
         /// <summary>
-        /// Get tags associated with the path.
+        /// 
         /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        public List<string>? GetTags(string path)
+        /// <param name="prop">Property name to sort on.</param>
+        /// <param name="asc">Which way boss?</param>
+        public void Sort(string prop, bool asc)
         {
-            var rec = _entities.GetValueOrDefault(path);
-            return rec is not null ? rec.Tags : null;
-        }
+            int dir = asc ? 1 : -1;
 
-        /// <summary>
-        /// Get string of tags associated with the path.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        public string GetTagsString(string path)
-        {
-            string s = ""; // default
-            var tags = GetTags(path);
-            if (tags is not null && tags.Count > 0)
+            switch (prop)
             {
-                s = $" [{string.Join(" ", tags)}]";
+                case "FullName":
+                    Files.Sort((a, b) => dir * a.FullName.CompareTo(b.FullName));
+                    break;
+
+                case "Id":
+                    Files.Sort((a, b) => dir * a.Id.CompareTo(b.Id));
+                    break;
+
+                case "Info":
+                    Files.Sort((a, b) => dir * a.Info.CompareTo(b.Info));
+                    break;
+
+                case "Tags":
+                    Files.Sort((a, b) => dir * a.Tags.CompareTo(b.Tags));
+                    break;
+
+                default:
+                    break;
             }
-
-            return s;
         }
 
-        /// <summary>
-        /// Set tags associated with the path.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="tags"></param>
-        public void SetTags(string path, List<string> tags)
-        {
-            _entities[path] = new(path, true, tags ?? new());
-        }
+        ///// <summary>
+        ///// Get tags associated with the path.
+        ///// </summary>
+        ///// <param name="path"></param>
+        ///// <returns></returns>
+        //public List<string>? GetTags(string path)
+        //{
+        //    var rec = _entities.GetValueOrDefault(path);
+        //    //return rec is not null ? rec.Tags : null;
+        //    return rec is not null ? rec.Tags : null;
+        //}
 
-        /// <summary>
-        /// Remove a record.
-        /// </summary>
-        /// <param name="path"></param>
-        public void Remove(string path)
-        {
-            _entities.Remove(path);
-        }
+        ///// <summary>
+        ///// Get string of tags associated with the path.
+        ///// </summary>
+        ///// <param name="path"></param>
+        ///// <returns></returns>
+        //public string GetTagsString(string path)
+        //{
+        //    string s = ""; // default
+        //    var tags = GetTags(path);
+        //    if (tags is not null && tags.Count > 0)
+        //    {
+        //        s = $" [{string.Join(" ", tags)}]";
+        //    }
+
+        //    return s;
+        //}
+
+        ///// <summary>
+        ///// Set tags associated with the name.
+        ///// </summary>
+        ///// <param name="fullName"></param>
+        ///// <param name="tags"></param>
+        //public void SetTags(string fullName, string id, string info, List<string> tags)
+        //{
+        //    _entities[fullName] = new(fullName, id, info, tags ?? new());
+        //}
+
+        ///// <summary>
+        ///// Remove a record.
+        ///// </summary>
+        ///// <param name="path"></param>
+        //public void Remove(string path)
+        //{
+        //    _files.Remove(path);
+        //}
         #endregion
 
         #region Internals
+        /// <summary>
+        /// Helper.
+        /// </summary>
+        void UpdateTags()
+        {
+            _allTags.Clear();
+            Dictionary<string, int> _tags = new();
+            Files.ForEach(f => f.Tags.SplitByToken(" ").ForEach(t => { if (!_tags.ContainsKey(t)) _tags.Add(t, 0); _tags[t]++; }));
+            _tags.OrderByDescending(t => t.Value).ForEach(t => _allTags.Add(t.Key));
+        }
+
         /// <summary>
         /// Debug stuff.
         /// </summary>
         public void FillFake()
         {
-            _entities.Clear();
+            Files.Clear();
             _allTags.Clear();
 
             var rnd = new Random(DateTime.Now.Millisecond);
 
             for (int i = 1; i < rnd.Next(5, 10); i++)
             {
-                var e = new TrackedEntity(Path: $"Path{i}", IsDir: i % 3 == 0, Tags: new List<string> { "TAG1", "TAG2", "TAG3" });
-                _entities.Add(e.Path, e);
+                var e = new TrackedFile($"FullName{i}", $"Id{i}", $"Info{i}", "TAG1 TAG2 TAG3");
+                //var e = new TrackedFile(FullName: $"FullName{i}", Id: $"Id{i}", Info: $"Info{i}", Tags: "TAG1 TAG2 TAG3");
+                Files.Add(e);
             }
         }
         #endregion

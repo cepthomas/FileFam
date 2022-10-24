@@ -18,7 +18,8 @@ namespace Ephemera.NotrApp
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+            var f = new MainForm();
+            Application.Run(f);
         }
     }
 }

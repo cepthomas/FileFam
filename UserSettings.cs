@@ -13,7 +13,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Ephemera.NotrApp
 {
     [Serializable]
-    public sealed class UserSettings : SettingsCore
+    public sealed class UserSettings : SettingsCore // TODO1 may not need any.
     {
         #region Persisted Editable Properties
         [DisplayName("Control Color")]
@@ -23,12 +23,12 @@ namespace Ephemera.NotrApp
         [JsonConverter(typeof(JsonColorConverter))]
         public Color ControlColor { get; set; } = Color.MediumOrchid;
 
-        [DisplayName("Root Paths")]
-        [Description("Your favorite places.")]
-        [Category("Files")]
-        [Browsable(true)]
-        [Editor(typeof(StringListEditor), typeof(UITypeEditor))]
-        public List<string> RootDirs { get; set; } = new();
+        // [DisplayName("Root Paths")]
+        // [Description("Your favorite places.")]
+        // [Category("Files")]
+        // [Browsable(true)]
+        // [Editor(typeof(StringListEditor), typeof(UITypeEditor))]
+        // public List<string> RootDirs { get; set; } = new();
 
         [DisplayName("Filters")]
         [Description("Show only these file types. Empty is valid for files without extensions.")]
@@ -38,7 +38,7 @@ namespace Ephemera.NotrApp
         public List<string> FilterExts { get; set; } = new();
 
         /// <summary></summary>
-        [DisplayName("Ignore Paths")]
+        [DisplayName("Ignore Dirs")]
         [Description("Ignore these noisy directories.")]
         [Category("Files")]
         [Browsable(true)]
@@ -63,13 +63,12 @@ namespace Ephemera.NotrApp
         [Description("Generate event with single or double click.")]
         [Browsable(true)]
         public bool SingleClickSelect { get; set; } = false;
-
         #endregion
 
-        #region Persisted Non-editable Persisted Properties
-        [Browsable(false)]
-        [Range(10, 80)]
-        public int SplitterPosition { get; set; } = 30;
-        #endregion
+        // #region Persisted Non-editable Persisted Properties
+        // [Browsable(false)]
+        // [Range(10, 80)]
+        // public int SplitterPosition { get; set; } = 30;
+        // #endregion
     }
 }
