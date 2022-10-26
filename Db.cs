@@ -14,23 +14,34 @@ using Ephemera.NBagOfTricks;
 
 namespace Ephemera.NotrApp
 {
-    /// <summary>The persisted record template.</summary>
-    [Serializable]
     //public record TrackedFile(string FullName, string Id, string Info, string Tags);
     //public record TrackedEntity(string FullName, string Id, string Info, List<string> Tags);
     // public record TrackedEntity(string Path, bool IsDir, List<string> Tags);
 
+    /// <summary>The persisted record template.</summary>
+    [Serializable]
     public class TrackedFile
     {
         public string FullName { get; set; } = "???";
-        public string Id { get; set; } = "???";
-        public string Info { get; set; } = "???";
-        public string Tags { get; set; } = "???";
+        public string Id { get; set; } = "";
+        public string Info { get; set; } = "";
 
+        public string Tags { get; set; } = ""; // TODO2 case sensitive?
+
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
         public TrackedFile()
         {
         }
 
+        /// <summary>
+        /// Full constructor
+        /// </summary>
+        /// <param name="fullName"></param>
+        /// <param name="id"></param>
+        /// <param name="info"></param>
+        /// <param name="tags"></param>
         public TrackedFile(string fullName, string id, string info, string tags)
         {
             FullName = fullName;
@@ -39,8 +50,6 @@ namespace Ephemera.NotrApp
             Tags = tags;
         }
     }
-
-    //Name, FullName
 
     /// <summary>
     /// Storage for tracked files and tags. Could be sqlite also.
@@ -51,13 +60,28 @@ namespace Ephemera.NotrApp
         /// <summary>The filename if available.</summary>
         string _fn = "";
 
+        /// <summary>API convenience. Must match TrackedFile. TODO2 maybe custom attribute for this?</summary>
+        public const int FullNameOrdinal = 0;
+        public const int IdOrdinal = 1;
+        public const int InfoOrdinal = 2;
+        public const int TagsOrdinal = 3;
+        #endregion
+
         ///// <summary>The records. Key is file path.</summary>
         //readonly Dictionary<string, TrackedFile> _files = new();
-
+        #region Properties
         public List<TrackedFile> Files { get; set; } = new();
 
-        /// <summary>Cache - not persisted.</summary>
-        readonly List<string> _allTags = new();
+        /// <summary>All tags in order from most common. Cached, not persisted.</summary>
+        public List<string> AllTags { get; set; } = new();
+
+        //TODO2 readonly?
+        //private readonly List<int> _myInts = new List<int>();
+        //public IEnumerable<int> MyInts => _myInts.AsReadOnly();
+        //// Alternatively
+        //public IReadOnlyCollection<int> MyInts => _myInts.AsReadOnly();
+        //However, if you want to access the elements of the IEnumerable collection by index or you want to
+        //retrieve the number of elements in the collection, you should use IReadOnlyList<T>
         #endregion
 
         #region Lifecycle
@@ -74,7 +98,7 @@ namespace Ephemera.NotrApp
 
             foreach (var rec in records)
             {
-   //             _files.Add(rec.FullName, rec);
+                //_files.Add(rec.FullName, rec);
                 Files.Add(rec);
             }
 
@@ -90,7 +114,7 @@ namespace Ephemera.NotrApp
         public void Save(string fn = "")
         {
             _fn = fn == "" ? _fn : fn;
-            JsonSerializerOptions opts = new() { WriteIndented = true }; // TODO1 indent for debug only.
+            JsonSerializerOptions opts = new() { WriteIndented = true };
             var recs = Files;
             string json = JsonSerializer.Serialize(recs, typeof(List<TrackedFile>), opts);
             File.WriteAllText(_fn, json);
@@ -101,27 +125,27 @@ namespace Ephemera.NotrApp
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="prop">Property name to sort on.</param>
+        /// <param name="ordinal">Ordinal to sort on.</param>
         /// <param name="asc">Which way boss?</param>
-        public void Sort(string prop, bool asc)
+        public void Sort(int ordinal, bool asc)
         {
             int dir = asc ? 1 : -1;
 
-            switch (prop)
+            switch (ordinal)
             {
-                case "FullName":
+                case FullNameOrdinal:
                     Files.Sort((a, b) => dir * a.FullName.CompareTo(b.FullName));
                     break;
 
-                case "Id":
+                case IdOrdinal:
                     Files.Sort((a, b) => dir * a.Id.CompareTo(b.Id));
                     break;
 
-                case "Info":
+                case InfoOrdinal:
                     Files.Sort((a, b) => dir * a.Info.CompareTo(b.Info));
                     break;
 
-                case "Tags":
+                case TagsOrdinal:
                     Files.Sort((a, b) => dir * a.Tags.CompareTo(b.Tags));
                     break;
 
@@ -185,10 +209,10 @@ namespace Ephemera.NotrApp
         /// </summary>
         void UpdateTags()
         {
-            _allTags.Clear();
+            AllTags.Clear();
             Dictionary<string, int> _tags = new();
             Files.ForEach(f => f.Tags.SplitByToken(" ").ForEach(t => { if (!_tags.ContainsKey(t)) _tags.Add(t, 0); _tags[t]++; }));
-            _tags.OrderByDescending(t => t.Value).ForEach(t => _allTags.Add(t.Key));
+            _tags.OrderByDescending(t => t.Value).ForEach(t => AllTags.Add(t.Key));
         }
 
         /// <summary>
@@ -197,7 +221,7 @@ namespace Ephemera.NotrApp
         public void FillFake()
         {
             Files.Clear();
-            _allTags.Clear();
+            AllTags.Clear();
 
             var rnd = new Random(DateTime.Now.Millisecond);
 

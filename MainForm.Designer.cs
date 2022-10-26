@@ -30,16 +30,16 @@
             this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
             this.SettingsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.AboutMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.FakeDbMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.ToolStrip = new System.Windows.Forms.ToolStrip();
-            this.btnDB = new System.Windows.Forms.ToolStripButton();
-            this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.ddbTags = new System.Windows.Forms.ToolStripDropDownButton();
             this.ddaToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ddbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ddcToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
             this.newToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.txtNewTag = new System.Windows.Forms.ToolStripTextBox();
             this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
@@ -51,8 +51,6 @@
             this.tvLog = new Ephemera.NBagOfUis.TextViewer();
             this.timer = new System.Windows.Forms.Timer(this.components);
             this.dgvFiles = new System.Windows.Forms.DataGridView();
-            this.txtNewTag = new System.Windows.Forms.ToolStripTextBox();
-            this.FakeDbMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.MenuStrip.SuspendLayout();
             this.ToolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
@@ -68,7 +66,7 @@
             this.MenuStrip.Location = new System.Drawing.Point(0, 0);
             this.MenuStrip.MdiWindowListItem = this.FileMenuItem;
             this.MenuStrip.Name = "MenuStrip";
-            this.MenuStrip.Size = new System.Drawing.Size(1242, 28);
+            this.MenuStrip.Size = new System.Drawing.Size(1034, 28);
             this.MenuStrip.TabIndex = 0;
             this.MenuStrip.Text = "menuStrip";
             // 
@@ -158,6 +156,12 @@
             this.AboutMenuItem.Size = new System.Drawing.Size(224, 26);
             this.AboutMenuItem.Text = "About";
             // 
+            // FakeDbMenuItem
+            // 
+            this.FakeDbMenuItem.Name = "FakeDbMenuItem";
+            this.FakeDbMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.FakeDbMenuItem.Text = "Fake Db";
+            // 
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
@@ -167,28 +171,13 @@
             // 
             this.ToolStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.ToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.btnDB,
-            this.toolStripSeparator4,
             this.ddbTags,
             this.toolStripSeparator11});
             this.ToolStrip.Location = new System.Drawing.Point(0, 28);
             this.ToolStrip.Name = "ToolStrip";
-            this.ToolStrip.Size = new System.Drawing.Size(1242, 27);
+            this.ToolStrip.Size = new System.Drawing.Size(1034, 27);
             this.ToolStrip.TabIndex = 1;
             this.ToolStrip.Text = "toolStrip";
-            // 
-            // btnDB
-            // 
-            this.btnDB.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.btnDB.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnDB.Name = "btnDB";
-            this.btnDB.Size = new System.Drawing.Size(33, 24);
-            this.btnDB.Text = "DB";
-            // 
-            // toolStripSeparator4
-            // 
-            this.toolStripSeparator4.Name = "toolStripSeparator4";
-            this.toolStripSeparator4.Size = new System.Drawing.Size(6, 27);
             // 
             // ddbTags
             // 
@@ -240,6 +229,11 @@
             this.newToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
             this.newToolStripMenuItem.Text = "new...";
             // 
+            // txtNewTag
+            // 
+            this.txtNewTag.Name = "txtNewTag";
+            this.txtNewTag.Size = new System.Drawing.Size(100, 27);
+            // 
             // toolStripSeparator11
             // 
             this.toolStripSeparator11.Name = "toolStripSeparator11";
@@ -270,9 +264,9 @@
             this.statusStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusInfo});
-            this.statusStrip.Location = new System.Drawing.Point(0, 628);
+            this.statusStrip.Location = new System.Drawing.Point(0, 616);
             this.statusStrip.Name = "statusStrip";
-            this.statusStrip.Size = new System.Drawing.Size(1242, 26);
+            this.statusStrip.Size = new System.Drawing.Size(1034, 26);
             this.statusStrip.TabIndex = 91;
             this.statusStrip.Text = "statusStrip1";
             // 
@@ -284,45 +278,36 @@
             // 
             // tvLog
             // 
-            this.tvLog.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this.tvLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.tvLog.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.tvLog.Location = new System.Drawing.Point(805, 372);
+            this.tvLog.Location = new System.Drawing.Point(12, 456);
             this.tvLog.MaxText = 5000;
             this.tvLog.Name = "tvLog";
             this.tvLog.Prompt = "> ";
-            this.tvLog.Size = new System.Drawing.Size(425, 240);
+            this.tvLog.Size = new System.Drawing.Size(1011, 144);
             this.tvLog.TabIndex = 92;
             this.tvLog.TabStop = false;
             this.tvLog.WordWrap = true;
             // 
             // dgvFiles
             // 
+            this.dgvFiles.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.dgvFiles.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvFiles.Location = new System.Drawing.Point(22, 103);
+            this.dgvFiles.Location = new System.Drawing.Point(12, 58);
             this.dgvFiles.Name = "dgvFiles";
             this.dgvFiles.RowHeadersWidth = 51;
             this.dgvFiles.RowTemplate.Height = 29;
-            this.dgvFiles.Size = new System.Drawing.Size(716, 283);
+            this.dgvFiles.Size = new System.Drawing.Size(1011, 384);
             this.dgvFiles.TabIndex = 94;
-            // 
-            // txtNewTag
-            // 
-            this.txtNewTag.Name = "txtNewTag";
-            this.txtNewTag.Size = new System.Drawing.Size(100, 27);
-            // 
-            // FakeDbMenuItem
-            // 
-            this.FakeDbMenuItem.Name = "FakeDbMenuItem";
-            this.FakeDbMenuItem.Size = new System.Drawing.Size(224, 26);
-            this.FakeDbMenuItem.Text = "Fake Db";
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1242, 654);
+            this.ClientSize = new System.Drawing.Size(1034, 642);
             this.Controls.Add(this.dgvFiles);
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.ToolStrip);
@@ -373,8 +358,6 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
 
         private System.Windows.Forms.Timer timer;
-        private System.Windows.Forms.ToolStripButton btnDB;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.DataGridView dgvFiles;
         private System.Windows.Forms.ToolStripDropDownButton ddbTags;
         private System.Windows.Forms.ToolStripMenuItem ddaToolStripMenuItem;

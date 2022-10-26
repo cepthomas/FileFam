@@ -9,11 +9,11 @@ using System.Diagnostics;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
+using System.ComponentModel;
 
-
-namespace Ephemera.NotrApp
+namespace Ephemera.NotrApp//TODO2 probably rename this.
 {
-    public partial class MainForm : Form
+    public partial class MainForm : Form //TODO2 clean up all menus and bars.
     {
         #region Fields
         /// <summary>My logger.</summary>
@@ -57,7 +57,7 @@ namespace Ephemera.NotrApp
             StartPosition = FormStartPosition.Manual;
             Location = new Point(_settings.FormGeometry.X, _settings.FormGeometry.Y);
             Size = new Size(_settings.FormGeometry.Width, _settings.FormGeometry.Height);
-            // KeyPreview = true; // for routing kbd strokes through OnKeyDown first.
+            //KeyPreview = true; // for routing kbd strokes through OnKeyDown first.
 
             // Other UI items.
             ToolStrip.Renderer = new NBagOfUis.CheckBoxRenderer() { SelectedColor = _settings.ControlColor };
@@ -66,15 +66,9 @@ namespace Ephemera.NotrApp
                 e.Cancel = e.CloseReason == ToolStripDropDownCloseReason.ItemClicked;
             };
 
-
-            //// FilTree settings. TODO1
-            //filTree.FilterExts = _settings.FilterExts;
-            //filTree.IgnoreDirs = _settings.IgnoreDirs;
-            //filTree.SingleClickSelect = _settings.SingleClickSelect;
-
             // File handling.
-            OpenMenuItem.Click += (_, __) => Open_Click();
-            MenuStrip.MenuActivate += (_, __) => UpdateUi();
+            //OpenMenuItem.Click += (_, __) => Open_Click();
+            //MenuStrip.MenuActivate += (_, __) => UpdateUi();
             FileMenuItem.DropDownOpening += File_DropDownOpening;
 
             // Tools.
@@ -85,37 +79,52 @@ namespace Ephemera.NotrApp
             _db = new();
             _db.Load(Path.Combine(appDir, "db.json"));
 
-            UpdateUi();
+            //UpdateUi();
 
             InitDgv();
 
             Text = $"NotrApp {MiscUtils.GetVersionString()}";
-
-            //FakeDbMenuItem.Visible = false;
+            statusInfo.Text = "TODO2 needed?";
             FakeDbMenuItem.Click += (_, __) => { _db.FillFake(); _db.Save(); };
+
         }
 
-
+        /// <summary>
+        /// Heavy lifting for the grid.
+        /// </summary>
         void InitDgv()
         {
             _bs.AllowNew = true; // need this so add works
+            //_bsQuery.SupportsSorting = true;
             _bs.DataSource = _db.Files;
-            // _bsQuery.SupportsSorting = true;
 
-            //dgvFiles.AutoGenerateColumns = true;
-            dgvFiles.DataSource = _bs;
+            //dgvFiles.AutoGenerateColumns = false;
             //dgvFiles.AllowUserToAddRows = true;
             //dgvFiles.RowHeadersVisible = true;
             dgvFiles.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvFiles.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvFiles.DataSource = _bs;
 
+            // Set widths from settings.
+            dgvFiles.Columns[Db.FullNameOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Db.FullNameOrdinal].Width = _settings.FullNameWidth;
+            dgvFiles.Columns[Db.IdOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Db.IdOrdinal].Width = _settings.IdWidth;
+            dgvFiles.Columns[Db.InfoOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Db.InfoOrdinal].Width = _settings.InfoWidth;
+            dgvFiles.Columns[Db.TagsOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
+            // Event handlers.
             dgvFiles.ColumnHeaderMouseClick += DgvFiles_ColumnHeaderMouseClick;
             dgvFiles.ColumnHeaderMouseDoubleClick += DgvFiles_ColumnHeaderMouseDoubleClick;
-
             dgvFiles.CellBeginEdit += DgvFiles_CellBeginEdit;
-
+            dgvFiles.CellEndEdit += DgvFiles_CellEndEdit;
             dgvFiles.UserDeletingRow += DgvFiles_UserDeletingRow;
+            dgvFiles.UserAddedRow += DgvFiles_UserAddedRow;
+            dgvFiles.CellDoubleClick += DgvFiles_CellDoubleClick;
 
-           // dgvFiles.ContextMenuStrip.Opening += DgvContextMenuStrip_Opening;
+            //dgvFiles.ContextMenuStrip = new();
+            //dgvFiles.ContextMenuStrip.Opening += DgvContextMenuStrip_Opening;
 
             // TODO1 Open txt file as ntr?
             // const string NOTR_FILE_TYPES = "*.ntr";
@@ -142,9 +151,20 @@ namespace Ephemera.NotrApp
 
         }
 
-        private void DgvContextMenuStrip_Opening(object? sender, System.ComponentModel.CancelEventArgs e)
+        void DgvFiles_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
         {
+            //TODO1 open this row file
+        }
 
+        void DgvFiles_UserAddedRow(object? sender, DataGridViewRowEventArgs e)
+        {
+            // TODO1 show file open dialog.
+            // TODO1 edit tags how???
+
+        }
+
+        void DgvContextMenuStrip_Opening(object? sender, CancelEventArgs e)
+        {
 
         }
 
@@ -155,21 +175,114 @@ namespace Ephemera.NotrApp
 
         void DgvFiles_CellBeginEdit(object? sender, DataGridViewCellCancelEventArgs e)
         {
-            // TODO1 if it's full name, pop up file open dlg.
-            // TODO1 if it's tags, pop up tag selector. ??
+            //var colsel = dgvFiles.Columns[e.ColumnIndex];
+            switch (e.ColumnIndex)
+            {
+                case Db.FullNameOrdinal:
+                    {
+                        // Pop up file open dlg.
+                        using OpenFileDialog openDlg = new()
+                        {
+                            Title = "Select a file"
+                            //Filter = fileTypes,
+                        };
+
+                        if (openDlg.ShowDialog() == DialogResult.OK)
+                        {
+                            dgvFiles.CurrentCell.Value = openDlg.FileName;
+                        }
+                        else
+                        {
+                            e.Cancel = true;
+                        }
+                    }
+                    break;
+
+                case Db.TagsOrdinal:
+                    {
+                        // Convert to list and pop up tag selector. When done update db list.
+                        var currentTags = dgvFiles.CurrentCell.Value.ToString()!.SplitByToken(" ").Distinct();
+                        Dictionary<string, bool> values = new();
+                        _db.AllTags.ForEach(t => values[t] = currentTags.Contains(t));
+
+                        using OptionsEditor oped = new()
+                        {
+                            AllowEdit = true,
+                            Values = values,
+                            StartPosition = FormStartPosition.Manual,
+                            Location = Cursor.Position
+                        };
+
+                        if (oped.ShowDialog() == DialogResult.OK)
+                        {
+                            var selVals = oped.Values.Where(v => v.Value).Select(v => v.Key);
+                            dgvFiles.CurrentCell.Value = string.Join(" ", selVals);
+                        }
+                        else
+                        {
+                            e.Cancel = true;
+                        }
+                    }
+                    break;
+
+                case Db.IdOrdinal:
+                case Db.InfoOrdinal:
+                    // Don't care.
+                    break;
+            }
+        }
+
+        void DgvFiles_CellEndEdit(object? sender, DataGridViewCellEventArgs e)
+        {
+           // var colsel = dgvFiles.Columns[e.ColumnIndex];
+
+
+            switch (e.ColumnIndex)
+            {
+                case Db.FullNameOrdinal:
+                    // TODO1 check for valid file.
+                    //        // Do validity checks.
+                    //        if (!File.Exists(fn))
+                    //        {
+                    //            throw new InvalidOperationException($"Invalid file.");
+                    //        }
+
+                    //        var ext = Path.GetExtension(fn).ToLower();
+                    //        var baseFn = Path.GetFileName(fn);
+
+                    //        // Valid file name.
+                    //        _logger.Info($"Opening file: {fn}");
+
+
+                    //        if (ok)
+                    //        {
+                    //            _settings.UpdateMru(fn);
+                    //        }
+                    break;
+
+                case Db.IdOrdinal:
+                    // Clean invalid chars.
+                    dgvFiles.CurrentCell.Value = dgvFiles.CurrentCell.Value.ToString().Replace(' ', '_');
+                    break;
+
+                case Db.TagsOrdinal:
+                case Db.InfoOrdinal:
+                    break;
+            }
         }
 
 
 
+
         /// <summary>
-        /// Do sorting.
+        /// Do sorting. TODO1 also by mru.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         void DgvFiles_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
         {
             var colsel = dgvFiles.Columns[e.ColumnIndex];
-            var prop = colsel.Name;
+            var name = colsel.Name;
             char cop = colsel.HeaderText.Last();
 
             // Reset all.
@@ -179,15 +292,19 @@ namespace Ephemera.NotrApp
             }
 
             bool asc = cop != '+';
-            _db.Sort(prop, asc);
+            _db.Sort(e.ColumnIndex, asc);
             _bs.ResetBindings(false);
             // Update selected col.
-            colsel.HeaderText = $"{colsel.Name} {(asc ? '+' : '-')}";
+            colsel.HeaderText = $"{name} {(asc ? '+' : '-')}";
         }
 
         void DgvFiles_ColumnHeaderMouseDoubleClick(object? sender, DataGridViewCellMouseEventArgs e)
         {
+
         }
+
+
+
 
 
 
@@ -256,31 +373,30 @@ namespace Ephemera.NotrApp
             });
         }
 
-        /// <summary>
-        /// Set UI item enables according to system states.
-        /// </summary>
-        void UpdateUi()
-        {
-            bool anyOpen = false;
-            //bool anyDirty = false;
+        ///// <summary>
+        ///// Set UI item enables according to system states.
+        ///// </summary>
+        //void UpdateUi()
+        //{
+        //    bool anyOpen = false;
+        //    //bool anyDirty = false;
 
-            OpenMenuItem.Enabled = true;
-            CloseMenuItem.Enabled = anyOpen;
-            CloseAllMenuItem.Enabled = anyOpen;
-            ExitMenuItem.Enabled = true;
+        //    OpenMenuItem.Enabled = true;
+        //    CloseMenuItem.Enabled = anyOpen;
+        //    CloseAllMenuItem.Enabled = anyOpen;
+        //    ExitMenuItem.Enabled = true;
 
-            AboutMenuItem.Enabled = true;
-            SettingsMenuItem.Enabled = true;
-        }
+        //    AboutMenuItem.Enabled = true;
+        //    SettingsMenuItem.Enabled = true;
+        //}
         #endregion
 
-        #region File I/O
         /// <summary>
         /// Common file opener.
         /// </summary>
         /// <param name="fn">The file to open.</param>
         /// <returns>Success.</returns>
-        bool OpenFile(string fn)
+        bool OpenFile(string fn) //TODO2 open txt as ntr?
         {
             bool ok = true;
 
@@ -302,6 +418,8 @@ namespace Ephemera.NotrApp
                 if (ok)
                 {
                     _settings.UpdateMru(fn);
+
+                    //TODO1 "open" the file
                 }
             }
             catch (Exception ex)
@@ -310,34 +428,21 @@ namespace Ephemera.NotrApp
                 ok = false;
             }
 
-            UpdateUi();
+            //UpdateUi();
 
             return ok;
         }
 
-        /// <summary>
-        /// Allows the user to select from file system.
-        /// </summary>
-        void Open_Click()
-        {
-            //var fn = GetUserFilename();
-            //if (fn != "")
-            //{
-            //    OpenFile(fn);
-            //}
-        }
-
-        #endregion
-
-        //#region Navigator
         ///// <summary>
-        ///// Tree has selected a file.
+        ///// Allows the user to select from file system.
         ///// </summary>
-        ///// <param name="sender"></param>
-        ///// <param name="fn"></param>
-        //void Navigator_FileSelectedEvent(object? sender, string fn)
+        //void Open_Click()
         //{
-        //    OpenFile(fn);
+        //    //var fn = GetUserFilename();
+        //    //if (fn != "")
+        //    //{
+        //    //    OpenFile(fn);
+        //    //}
         //}
         //#endregion
 
