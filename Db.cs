@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Reflection;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,13 +12,8 @@ using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfTricks;
 
 
-
 namespace Ephemera.NotrApp
 {
-    //public record TrackedFile(string FullName, string Id, string Info, string Tags);
-    //public record TrackedEntity(string FullName, string Id, string Info, List<string> Tags);
-    // public record TrackedEntity(string Path, bool IsDir, List<string> Tags);
-
     /// <summary>The persisted record template.</summary>
     [Serializable]
     public class TrackedFile
@@ -25,8 +21,7 @@ namespace Ephemera.NotrApp
         public string FullName { get; set; } = "???";
         public string Id { get; set; } = "";
         public string Info { get; set; } = "";
-
-        public string Tags { get; set; } = ""; // TODO2 case sensitive?
+        public string Tags { get; set; } = ""; // TODO1 case sensitive?
 
         /// <summary>
         /// Default constructor.
@@ -60,7 +55,7 @@ namespace Ephemera.NotrApp
         /// <summary>The filename if available.</summary>
         string _fn = "";
 
-        /// <summary>API convenience. Must match TrackedFile. TODO2 maybe custom attribute for this?</summary>
+        /// <summary>API convenience. Must match TrackedFile. TODO1 smarter way?</summary>
         public const int FullNameOrdinal = 0;
         public const int IdOrdinal = 1;
         public const int InfoOrdinal = 2;
@@ -69,19 +64,12 @@ namespace Ephemera.NotrApp
 
         ///// <summary>The records. Key is file path.</summary>
         //readonly Dictionary<string, TrackedFile> _files = new();
+
         #region Properties
         public List<TrackedFile> Files { get; set; } = new();
 
         /// <summary>All tags in order from most common. Cached, not persisted.</summary>
         public List<string> AllTags { get; set; } = new();
-
-        //TODO2 readonly?
-        //private readonly List<int> _myInts = new List<int>();
-        //public IEnumerable<int> MyInts => _myInts.AsReadOnly();
-        //// Alternatively
-        //public IReadOnlyCollection<int> MyInts => _myInts.AsReadOnly();
-        //However, if you want to access the elements of the IEnumerable collection by index or you want to
-        //retrieve the number of elements in the collection, you should use IReadOnlyList<T>
         #endregion
 
         #region Lifecycle
@@ -95,13 +83,7 @@ namespace Ephemera.NotrApp
             JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
             string json = File.ReadAllText(fn);
             var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
-
-            foreach (var rec in records)
-            {
-                //_files.Add(rec.FullName, rec);
-                Files.Add(rec);
-            }
-
+            records.ForEach(r => Files.Add(r));
             UpdateTags();
 
             _fn = fn;
@@ -154,6 +136,7 @@ namespace Ephemera.NotrApp
             }
         }
 
+        // TODO1 any of these?
         ///// <summary>
         ///// Get tags associated with the path.
         ///// </summary>
@@ -179,7 +162,6 @@ namespace Ephemera.NotrApp
         //    {
         //        s = $" [{string.Join(" ", tags)}]";
         //    }
-
         //    return s;
         //}
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -9,11 +10,14 @@ using System.Diagnostics;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
-using System.ComponentModel;
 
-namespace Ephemera.NotrApp//TODO2 probably rename this.
+
+// TODO1 Open txt file as ntr? custom aliases and/or pgm associations?
+
+
+namespace Ephemera.NotrApp//TODO1 probably rename this.
 {
-    public partial class MainForm : Form //TODO2 clean up all menus and bars.
+    public partial class MainForm : Form
     {
         #region Fields
         /// <summary>My logger.</summary>
@@ -69,24 +73,23 @@ namespace Ephemera.NotrApp//TODO2 probably rename this.
             // File handling.
             //OpenMenuItem.Click += (_, __) => Open_Click();
             //MenuStrip.MenuActivate += (_, __) => UpdateUi();
-            FileMenuItem.DropDownOpening += File_DropDownOpening;
+            //FileMenuItem.DropDownOpening += File_DropDownOpening;
 
             // Tools.
             AboutMenuItem.Click += (_, __) => MiscUtils.ShowReadme("NotrApp");
             SettingsMenuItem.Click += (_, __) => EditSettings();
+            FakeDbMenuItem.Click += (_, __) => { _db.FillFake(); _db.Save(); };
 
             // The db.
             _db = new();
-            _db.Load(Path.Combine(appDir, "db.json"));
+            _db.Load(Path.Combine(appDir, "db.json"));//TODO1 user selectable db file. store mru?
 
             //UpdateUi();
 
             InitDgv();
 
             Text = $"NotrApp {MiscUtils.GetVersionString()}";
-            statusInfo.Text = "TODO2 needed?";
-            FakeDbMenuItem.Click += (_, __) => { _db.FillFake(); _db.Save(); };
-
+            statusInfo.Text = "TODO1 needed?";
         }
 
         /// <summary>
@@ -116,61 +119,50 @@ namespace Ephemera.NotrApp//TODO2 probably rename this.
 
             // Event handlers.
             dgvFiles.ColumnHeaderMouseClick += DgvFiles_ColumnHeaderMouseClick;
-            dgvFiles.ColumnHeaderMouseDoubleClick += DgvFiles_ColumnHeaderMouseDoubleClick;
+            //dgvFiles.ColumnHeaderMouseDoubleClick += DgvFiles_ColumnHeaderMouseDoubleClick;
             dgvFiles.CellBeginEdit += DgvFiles_CellBeginEdit;
             dgvFiles.CellEndEdit += DgvFiles_CellEndEdit;
             dgvFiles.UserDeletingRow += DgvFiles_UserDeletingRow;
-            dgvFiles.UserAddedRow += DgvFiles_UserAddedRow;
+            //dgvFiles.UserAddedRow += DgvFiles_UserAddedRow;
             dgvFiles.CellDoubleClick += DgvFiles_CellDoubleClick;
+
+           // dgvFiles.MouseMove += DgvFiles_MouseMove;
+            dgvFiles.CellMouseEnter += DgvFiles_CellMouseEnter;
 
             //dgvFiles.ContextMenuStrip = new();
             //dgvFiles.ContextMenuStrip.Opening += DgvContextMenuStrip_Opening;
 
-            // TODO1 Open txt file as ntr?
-            // const string NOTR_FILE_TYPES = "*.ntr";
-            // const string EDITOR_FILE_TYPES = "*.txt;*.csv;*.json;*.c;*.cpp;*.cs;*.h";
-            // const string APP_FILE_TYPES = "*.doc;*.docx;*.xsl;*.xslx;*.pdf";
-
-
-            // TODO1 Filter: tags, file/dir name (wildcards).
-
-
-
-            // dgv.CellFormatting += DataGridViewCellFormattingEventHandler(this.dgvReagents_CellFormatting);
-            // dgv.CellMouseDown += DataGridViewCellMouseEventHandler(this.DataGridView_CellMouseDown);
-            // dgv.CellValueChanged += DataGridViewCellEventHandler(this.dgvReagents_CellValueChanged);
-            // dgv.CurrentCellDirtyStateChanged += new System.EventHandler(this.dgvSetDirty_CurrentCellDirtyStateChanged);
-            // dgv.DataError += DataGridViewDataErrorEventHandler(this.DataGridView_DataError);
-            // dgv.DefaultValuesNeeded += DataGridViewRowEventHandler(this.dgvReagents_DefaultValuesNeeded);
-            // dgv.EditingControlShowing += DataGridViewEditingControlShowingEventHandler(this.dgvReagents_EditingControlShowing);
-            // dgv.RowsAdded += DataGridViewRowsAddedEventHandler(this.dgvReagents_RowsAdded);
-            // dgv.KeyDown += dgvReagents_KeyDown;
-            // this.dgvResults.CellClick += DataGridViewCellEventHandler(this.dgvResults_CellClick);
             //dataGridViewQueryList.RowPostPaint += new DataGridViewRowPostPaintEventHandler(DataGridViewQueryList_RowPostPaint);
+        }
 
 
+        string GetCurrentFullName(int row)
+        {
+            var fn = "";
+
+            if (row < _db.Files.Count && row >= 0)
+            {
+                fn = _db.Files[row].FullName;
+            }
+
+            return fn;
+        }
+
+
+        void DgvFiles_CellMouseEnter(object? sender, DataGridViewCellEventArgs e)
+        {
+            statusInfo.Text = GetCurrentFullName(e.RowIndex);
         }
 
         void DgvFiles_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
         {
-            //TODO1 open this row file
-        }
-
-        void DgvFiles_UserAddedRow(object? sender, DataGridViewRowEventArgs e)
-        {
-            // TODO1 show file open dialog.
-            // TODO1 edit tags how???
-
-        }
-
-        void DgvContextMenuStrip_Opening(object? sender, CancelEventArgs e)
-        {
-
+            OpenFile(GetCurrentFullName(e.RowIndex));
         }
 
         void DgvFiles_UserDeletingRow(object? sender, DataGridViewRowCancelEventArgs e)
         {
-            // TODO1 ask user first.
+            // Ask user first.
+            e.Cancel = MessageBox.Show("Are you sure you want to delete this row?", "Delete", MessageBoxButtons.OKCancel) == DialogResult.Cancel;
         }
 
         void DgvFiles_CellBeginEdit(object? sender, DataGridViewCellCancelEventArgs e)
@@ -234,35 +226,21 @@ namespace Ephemera.NotrApp//TODO2 probably rename this.
 
         void DgvFiles_CellEndEdit(object? sender, DataGridViewCellEventArgs e)
         {
-           // var colsel = dgvFiles.Columns[e.ColumnIndex];
-
-
             switch (e.ColumnIndex)
             {
                 case Db.FullNameOrdinal:
-                    // TODO1 check for valid file.
-                    //        // Do validity checks.
-                    //        if (!File.Exists(fn))
-                    //        {
-                    //            throw new InvalidOperationException($"Invalid file.");
-                    //        }
-
-                    //        var ext = Path.GetExtension(fn).ToLower();
-                    //        var baseFn = Path.GetFileName(fn);
-
-                    //        // Valid file name.
-                    //        _logger.Info($"Opening file: {fn}");
-
-
-                    //        if (ok)
-                    //        {
-                    //            _settings.UpdateMru(fn);
-                    //        }
+                    // Check for valid file.
+                    if (!File.Exists(GetCurrentFullName(e.RowIndex)))
+                    {
+                        dgvFiles.CancelEdit();
+                    }
                     break;
 
                 case Db.IdOrdinal:
                     // Clean invalid chars.
-                    dgvFiles.CurrentCell.Value = dgvFiles.CurrentCell.Value.ToString().Replace(' ', '_');
+                    var id = dgvFiles.CurrentCell.Value.ToString()!.Replace(' ', '_');
+                    // Check for uniqueness. TODO1?
+                    dgvFiles.CurrentCell.Value = id;
                     break;
 
                 case Db.TagsOrdinal:
@@ -297,12 +275,6 @@ namespace Ephemera.NotrApp//TODO2 probably rename this.
             // Update selected col.
             colsel.HeaderText = $"{name} {(asc ? '+' : '-')}";
         }
-
-        void DgvFiles_ColumnHeaderMouseDoubleClick(object? sender, DataGridViewCellMouseEventArgs e)
-        {
-
-        }
-
 
 
 
@@ -348,103 +320,36 @@ namespace Ephemera.NotrApp//TODO2 probably rename this.
         }
         #endregion
 
-        #region Menu management
-        /// <summary>
-        /// Show the recent files in the menu.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        void File_DropDownOpening(object? sender, EventArgs e)
-        {
-            var vv = FileMenuItem.DropDownItems;
-
-            RecentMenuItem.DropDownItems.Clear();
-
-            _settings.RecentFiles.ForEach(f =>
-            {
-                ToolStripMenuItem menuItem = new(f);
-                menuItem.Click += (object? sender, EventArgs e) =>
-                {
-                    string fn = sender!.ToString()!;
-                    OpenFile(fn);
-                };
-
-                RecentMenuItem.DropDownItems.Add(menuItem);
-            });
-        }
-
-        ///// <summary>
-        ///// Set UI item enables according to system states.
-        ///// </summary>
-        //void UpdateUi()
-        //{
-        //    bool anyOpen = false;
-        //    //bool anyDirty = false;
-
-        //    OpenMenuItem.Enabled = true;
-        //    CloseMenuItem.Enabled = anyOpen;
-        //    CloseAllMenuItem.Enabled = anyOpen;
-        //    ExitMenuItem.Enabled = true;
-
-        //    AboutMenuItem.Enabled = true;
-        //    SettingsMenuItem.Enabled = true;
-        //}
-        #endregion
-
         /// <summary>
         /// Common file opener.
         /// </summary>
         /// <param name="fn">The file to open.</param>
-        /// <returns>Success.</returns>
-        bool OpenFile(string fn) //TODO2 open txt as ntr?
+        void OpenFile(string fn) //TODO1 open txt as ntr?
         {
-            bool ok = true;
+            bool ok = File.Exists(fn);
 
-            try
+            if (ok)
             {
-                // Do validity checks.
-                if (!File.Exists(fn))
-                {
-                    throw new InvalidOperationException($"Invalid file.");
-                }
-
                 var ext = Path.GetExtension(fn).ToLower();
                 var baseFn = Path.GetFileName(fn);
 
                 // Valid file name.
                 _logger.Info($"Opening file: {fn}");
 
+                //using Process fileopener = new Process();
+                //fileopener.StartInfo.FileName = "explorer";
+                //fileopener.StartInfo.Arguments = "\"" + path + "\"";
+                //fileopener.Start();
 
-                if (ok)
-                {
-                    _settings.UpdateMru(fn);
+                Process.Start("explorer", "\"" + fn + "\"");
 
-                    //TODO1 "open" the file
-                }
+                _settings.UpdateMru(fn);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.Error($"Couldn't open the file: {fn} because: {ex.Message}");
-                ok = false;
+                _logger.Warn($"Inalid file: {fn}");
             }
-
-            //UpdateUi();
-
-            return ok;
         }
-
-        ///// <summary>
-        ///// Allows the user to select from file system.
-        ///// </summary>
-        //void Open_Click()
-        //{
-        //    //var fn = GetUserFilename();
-        //    //if (fn != "")
-        //    //{
-        //    //    OpenFile(fn);
-        //    //}
-        //}
-        //#endregion
 
         #region Settings
         /// <summary>

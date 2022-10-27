@@ -12,7 +12,7 @@ using Ephemera.NBagOfTricks.Slog;
 namespace Ephemera.NotrApp
 {
     [Serializable]
-    public sealed class UserSettings : SettingsCore // TODO2 scrub.
+    public sealed class UserSettings : SettingsCore // TODO1 scrub.
     {
         #region Persisted Editable Properties
         [DisplayName("Control Color")]
