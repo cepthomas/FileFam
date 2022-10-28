@@ -1,4 +1,4 @@
-﻿namespace Ephemera.NotrApp
+﻿namespace Ephemera.FileFam
 {
     partial class MainForm
     {
@@ -43,6 +43,8 @@
             this.tvLog = new Ephemera.NBagOfUis.TextViewer();
             this.timer = new System.Windows.Forms.Timer(this.components);
             this.dgvFiles = new System.Windows.Forms.DataGridView();
+            this.btnOpenDb = new System.Windows.Forms.ToolStripButton();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.ToolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvFiles)).BeginInit();
@@ -65,7 +67,9 @@
             this.ddbTags,
             this.toolStripSeparator11,
             this.ToolsMenu,
-            this.toolStripSeparator4});
+            this.toolStripSeparator4,
+            this.btnOpenDb,
+            this.toolStripSeparator1});
             this.ToolStrip.Location = new System.Drawing.Point(0, 0);
             this.ToolStrip.Name = "ToolStrip";
             this.ToolStrip.Size = new System.Drawing.Size(1034, 27);
@@ -91,7 +95,7 @@
             // 
             this.ddaToolStripMenuItem.CheckOnClick = true;
             this.ddaToolStripMenuItem.Name = "ddaToolStripMenuItem";
-            this.ddaToolStripMenuItem.Size = new System.Drawing.Size(174, 26);
+            this.ddaToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
             this.ddaToolStripMenuItem.Text = "dda";
             // 
             // ddbToolStripMenuItem
@@ -101,25 +105,25 @@
             this.ddbToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ddbToolStripMenuItem.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.ddbToolStripMenuItem.Name = "ddbToolStripMenuItem";
-            this.ddbToolStripMenuItem.Size = new System.Drawing.Size(174, 26);
+            this.ddbToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
             this.ddbToolStripMenuItem.Text = "ddb";
             // 
             // ddcToolStripMenuItem
             // 
             this.ddcToolStripMenuItem.CheckOnClick = true;
             this.ddcToolStripMenuItem.Name = "ddcToolStripMenuItem";
-            this.ddcToolStripMenuItem.Size = new System.Drawing.Size(174, 26);
+            this.ddcToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
             this.ddcToolStripMenuItem.Text = "ddc";
             // 
             // toolStripSeparator10
             // 
             this.toolStripSeparator10.Name = "toolStripSeparator10";
-            this.toolStripSeparator10.Size = new System.Drawing.Size(171, 6);
+            this.toolStripSeparator10.Size = new System.Drawing.Size(221, 6);
             // 
             // newToolStripMenuItem
             // 
             this.newToolStripMenuItem.Name = "newToolStripMenuItem";
-            this.newToolStripMenuItem.Size = new System.Drawing.Size(174, 26);
+            this.newToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
             this.newToolStripMenuItem.Text = "new...";
             // 
             // txtNewTag
@@ -147,19 +151,19 @@
             // SettingsMenuItem
             // 
             this.SettingsMenuItem.Name = "SettingsMenuItem";
-            this.SettingsMenuItem.Size = new System.Drawing.Size(105, 26);
+            this.SettingsMenuItem.Size = new System.Drawing.Size(145, 26);
             this.SettingsMenuItem.Text = "Settings";
             // 
             // AboutMenuItem
             // 
             this.AboutMenuItem.Name = "AboutMenuItem";
-            this.AboutMenuItem.Size = new System.Drawing.Size(105, 26);
+            this.AboutMenuItem.Size = new System.Drawing.Size(145, 26);
             this.AboutMenuItem.Text = "About";
             // 
             // FakeDbMenuItem
             // 
             this.FakeDbMenuItem.Name = "FakeDbMenuItem";
-            this.FakeDbMenuItem.Size = new System.Drawing.Size(105, 26);
+            this.FakeDbMenuItem.Size = new System.Drawing.Size(145, 26);
             this.FakeDbMenuItem.Text = "Fake DB";
             // 
             // toolStripSeparator4
@@ -231,6 +235,19 @@
             this.dgvFiles.Size = new System.Drawing.Size(1011, 412);
             this.dgvFiles.TabIndex = 94;
             // 
+            // btnOpenDb
+            // 
+            this.btnOpenDb.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnOpenDb.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.btnOpenDb.Name = "btnOpenDb";
+            this.btnOpenDb.Size = new System.Drawing.Size(99, 24);
+            this.btnOpenDb.Text = "Open Db";
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 27);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
@@ -253,6 +270,19 @@
 
         }
 
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
         #endregion
 
         private System.Windows.Forms.ToolTip toolTip;
@@ -285,5 +315,7 @@
         private System.Windows.Forms.ToolStripMenuItem ddcToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem newToolStripMenuItem;
         private System.Windows.Forms.ToolStripTextBox txtNewTag;
+        private System.Windows.Forms.ToolStripButton btnOpenDb;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
     }
 }

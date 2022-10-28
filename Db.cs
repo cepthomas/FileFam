@@ -11,8 +11,9 @@ using System.Text.Json.Serialization;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfTricks;
 
+// TODO1 should Tags and Id be case insensitive?
 
-namespace Ephemera.NotrApp
+namespace Ephemera.FileFam
 {
     /// <summary>The persisted record template.</summary>
     [Serializable]
@@ -21,7 +22,7 @@ namespace Ephemera.NotrApp
         public string FullName { get; set; } = "???";
         public string Id { get; set; } = "";
         public string Info { get; set; } = "";
-        public string Tags { get; set; } = ""; // TODO1 case sensitive?
+        public string Tags { get; set; } = "";
 
         /// <summary>
         /// Default constructor.
@@ -74,16 +75,28 @@ namespace Ephemera.NotrApp
         /// Load db from file.
         /// </summary>
         /// <param name="fn">Where the data lives.</param>
-        /// <returns></returns>
-        public void Load(string fn)
+        /// <returns>Success.</returns>
+        public bool Load(string fn)
         {
-            JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
-            string json = File.ReadAllText(fn);
-            var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
-            records.ForEach(r => Files.Add(r));
-            UpdateTags();
+            bool ok = true;
+
+            try
+            {
+                JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
+                string json = File.ReadAllText(fn);
+                var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
+                records.ForEach(r => Files.Add(r));
+                UpdateTags();
+            }
+            catch
+            {
+                // Let's just assume it's a new file.
+                ok = false;
+            }
 
             _fn = fn;
+
+            return ok;
         }
 
         /// <summary>

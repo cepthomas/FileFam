@@ -12,19 +12,7 @@ using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 
 
-// TODO1 Open txt file as ntr? custom aliases and/or pgm associations?
-// subl -n -w %1 --command "set_file_type {\"syntax\": \"Packages/JavaScript/JSON.sublime-syntax\"}"
-// When I try this, I see that it sets the syntax of the tab that was active before I executed the command.
-// This tells us, that the command supplied on the command line is executed before the file is loaded, likely because ST does this asynchronously.
-// For me, it's possible to get it working by using a separate invocation:
-// subl C:\test\README && subl --command "set_file_type { \"syntax\": \"Packages/JavaScript/JSON.sublime-syntax\" }"
-// Note that I'm not using -w, as this would wait until the file is closed before executing the command.
-// Also, you can set the syntax of a new file directly using the new_file command:
-// subl --command "new_file { \"syntax\": \"Packages/JavaScript/JSON.sublime-syntax\" }"
-// Obviously, if you want it in a new window, you can keep the -n argument. And if you want Sublime Text not to return control to the shell until you close the file, then you can keep the -w too, but from what I can see, that only works if you are opening a file, not when creating a new one. And if you use -w, you won't be able to change the syntax from the command line. You may be better off using a plugin like ApplySyntax or writing a small Python script yourself to set the file type when a file is opened with the path C:\test\README etc.
-
-
-namespace Ephemera.NotrApp//TODO1 probably rename this.
+namespace Ephemera.FileFam
 {
     public partial class MainForm : Form
     {
@@ -49,7 +37,7 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
         public MainForm()
         {
             // Must do this first before initializing.
-            string appDir = MiscUtils.GetAppDataDir("NotrApp", "Ephemera");
+            string appDir = MiscUtils.GetAppDataDir("FileFam", "Ephemera");
             _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));
 
             InitializeComponent();
@@ -84,25 +72,29 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
             //MenuStrip.MenuActivate += (_, __) => UpdateUi();
             //FileMenuItem.DropDownOpening += File_DropDownOpening;
 
+            //btnOpenDb.Click += OpenDb_Click;
+
             // Tools.
-            AboutMenuItem.Click += (_, __) => MiscUtils.ShowReadme("NotrApp");
+            AboutMenuItem.Click += (_, __) => MiscUtils.ShowReadme("FileFam");
             SettingsMenuItem.Click += (_, __) => EditSettings();
             //FakeDbMenuItem.Click += (_, __) => { _db.FillFake(); _db.Save(); };
 
             // The db.
             _db = new();
-            _db.Load(Path.Combine(appDir, "db.json"));//TODO1 user selectable db file. store mru?
-
-            //UpdateUi();
+            var dbfn = Path.Combine(appDir, "filefam_db.json");
+            if (!_db.Load(dbfn))
+            {
+                _logger.Warn("Couldn't open db file so I made a new one for you");
+            }
 
             InitDgv();
 
-            Text = $"NotrApp {MiscUtils.GetVersionString()}";
-            statusInfo.Text = "TODO1 needed?";
+            Text = $"FileFam {MiscUtils.GetVersionString()}";
+            statusInfo.Text = "";
         }
 
         /// <summary>
-        /// Heavy lifting for the grid.
+        /// Heavy lifting for the grid init.
         /// </summary>
         void InitDgv()
         {
@@ -144,22 +136,69 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
             //dataGridViewQueryList.RowPostPaint += new DataGridViewRowPostPaintEventHandler(DataGridViewQueryList_RowPostPaint);
         }
 
+        /// <summary>
+        /// Form is legal now. Init things that want to log.
+        /// </summary>
+        /// <param name="e"></param>
+        protected override void OnLoad(EventArgs e)
+        {
+            // Initialize tree from user settings.
+            //InitNavigator();
+
+            base.OnLoad(e);
+        }
+
+        /// <summary>
+        /// Bye-bye.
+        /// </summary>
+        /// <param name="e"></param>
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+ //           _db.Save();
+            SaveSettings();
+            _logger.Info("Shutting down");
+            LogManager.Stop();
+            base.OnFormClosing(e);
+        }
+        #endregion
+
+        #region Gridview event handlers
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         void DgvFiles_CellMouseEnter(object? sender, DataGridViewCellEventArgs e)
         {
             statusInfo.Text = GetFullName(e.RowIndex);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         void DgvFiles_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
         {
             OpenFile(GetFullName(e.RowIndex));
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         void DgvFiles_UserDeletingRow(object? sender, DataGridViewRowCancelEventArgs e)
         {
             // Ask user first.
             e.Cancel = MessageBox.Show("Are you sure you want to delete this row?", "Delete", MessageBoxButtons.OKCancel) == DialogResult.Cancel;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         void DgvFiles_CellBeginEdit(object? sender, DataGridViewCellCancelEventArgs e)
         {
             //var colsel = dgvFiles.Columns[e.ColumnIndex];
@@ -167,20 +206,44 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
             {
                 case Db.FullNameOrdinal:
                     {
+                        StringBuilder sb = new();
+                        for (int f = 0; f < _settings.FileFilters.Count; f++)
+                        {
+                            var filter = _settings.FileFilters[f];
+
+                            var parts = filter.SplitByToken(",");
+                            if (parts.Count >= 2)
+                            {
+                                List<string> fs = new();
+                                fs.Add($"{parts[0]} Files|");
+
+                                for (int p = 1; p < parts.Count; p++)
+                                {
+                                    fs.Add($"*.{parts[p]}");
+                                    if (p < parts.Count - 1)
+                                    {
+                                        fs.Add(";");
+                                    }
+                                }
+                                sb.Append(string.Join("", fs));
+
+                                if (f < _settings.FileFilters.Count - 1)
+                                {
+                                    sb.Append("|");
+                                }
+                            }
+                            else
+                            {
+                                _logger.Warn($"Something wrong with your FileFilters setting: {filter}");
+                            }
+                        }
+                        var sfilter = sb.ToString();
+
                         // Pop up file open dlg.
                         using OpenFileDialog openDlg = new()
                         {
-                            Title = "Select a file"
-                            //Filter = fileTypes, TODO1 from settings + AllFiles
-                            // "FileFilters": [
-                            //     "Notr,ntr,notr",
-                            //     "Text,txt,csv,json",
-                            //     "Doc,doc,docx,xsl,xslx,pdf",
-                            //     "All,*"
-                            //   ],
-                            //     -->
-                            // "Notr Files|*.ntr;*.notr|Text Files|*.txt; ..."
-
+                            Title = "Select a file",
+                            Filter = sfilter
                         };
 
                         if (openDlg.ShowDialog() == DialogResult.OK)
@@ -228,6 +291,11 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         void DgvFiles_CellEndEdit(object? sender, DataGridViewCellEventArgs e)
         {
             switch (e.ColumnIndex)
@@ -243,7 +311,7 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
                 case Db.IdOrdinal:
                     // Clean invalid chars.
                     var id = dgvFiles.CurrentCell.Value.ToString()!.Replace(' ', '_');
-                    // Check for uniqueness. TODO1?
+                    // TODO1 Check for uniqueness.
                     dgvFiles.CurrentCell.Value = id;
                     break;
 
@@ -252,9 +320,6 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
                     break;
             }
         }
-
-
-
 
         /// <summary>
         /// Do sorting. TODO1 also by mru.
@@ -279,7 +344,34 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
             // Update selected col.
             colsel.HeaderText = $"{name} {(asc ? '+' : '-')}";
         }
+        #endregion
 
+        #region Helpers
+        /// <summary>
+        /// Common file opener.
+        /// </summary>
+        /// <param name="fn">The file to open.</param>
+        void OpenFile(string fn)
+        {
+            bool ok = File.Exists(fn);
+
+            if (ok)
+            {
+                var ext = Path.GetExtension(fn).ToLower();
+                var baseFn = Path.GetFileName(fn);
+
+                // Valid file name.
+                _logger.Info($"Opening file: {fn}");
+
+                Process.Start("explorer", "\"" + fn + "\"");
+
+                _settings.UpdateMru(fn);
+            }
+            else
+            {
+                _logger.Warn($"Inalid file: {fn}");
+            }
+        }
 
         /// <summary>
         /// Get the full name at the row index.
@@ -297,79 +389,7 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
 
             return fn;
         }
-
-
-
-        /// <summary>
-        /// Form is legal now. Init things that want to log.
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnLoad(EventArgs e)
-        {
-            // Initialize tree from user settings.
-            //InitNavigator();
-
-            base.OnLoad(e);
-        }
-
-        /// <summary>
-        /// Bye-bye.
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnFormClosing(FormClosingEventArgs e)
-        {
- //           _db.Save();
-            SaveSettings();
-            _logger.Info("Shutting down");
-            LogManager.Stop();
-            base.OnFormClosing(e);
-        }
-
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
-
-            base.Dispose(disposing);
-        }
         #endregion
-
-        /// <summary>
-        /// Common file opener.
-        /// </summary>
-        /// <param name="fn">The file to open.</param>
-        void OpenFile(string fn) //TODO1 open txt as ntr?
-        {
-            bool ok = File.Exists(fn);
-
-            if (ok)
-            {
-                var ext = Path.GetExtension(fn).ToLower();
-                var baseFn = Path.GetFileName(fn);
-
-                // Valid file name.
-                _logger.Info($"Opening file: {fn}");
-
-                //using Process fileopener = new Process();
-                //fileopener.StartInfo.FileName = "explorer";
-                //fileopener.StartInfo.Arguments = "\"" + path + "\"";
-                //fileopener.Start();
-
-                Process.Start("explorer", "\"" + fn + "\"");
-
-                _settings.UpdateMru(fn);
-            }
-            else
-            {
-                _logger.Warn($"Inalid file: {fn}");
-            }
-        }
 
         #region Settings
         /// <summary>
@@ -391,14 +411,6 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
                     case "NotifLogLevel":
                         restart = true;
                         break;
-
-                    // case "SingleClickSelect":
-                    //    filTree.SingleClickSelect = _settings.SingleClickSelect;
-                    //     break;
-
-                    //case "SplitterPosition":
-                    //    filTree.SplitterPosition = _settings.SplitterPosition;
-                    //    break;
                 }
             }
 

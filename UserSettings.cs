@@ -9,7 +9,7 @@ using Ephemera.NBagOfUis;
 using Ephemera.NBagOfTricks.Slog;
 
 
-namespace Ephemera.NotrApp
+namespace Ephemera.FileFam
 {
     [Serializable]
     public sealed class UserSettings : SettingsCore
