@@ -13,6 +13,15 @@ using Ephemera.NBagOfUis;
 
 
 // TODO1 Open txt file as ntr? custom aliases and/or pgm associations?
+// subl -n -w %1 --command "set_file_type {\"syntax\": \"Packages/JavaScript/JSON.sublime-syntax\"}"
+// When I try this, I see that it sets the syntax of the tab that was active before I executed the command.
+// This tells us, that the command supplied on the command line is executed before the file is loaded, likely because ST does this asynchronously.
+// For me, it's possible to get it working by using a separate invocation:
+// subl C:\test\README && subl --command "set_file_type { \"syntax\": \"Packages/JavaScript/JSON.sublime-syntax\" }"
+// Note that I'm not using -w, as this would wait until the file is closed before executing the command.
+// Also, you can set the syntax of a new file directly using the new_file command:
+// subl --command "new_file { \"syntax\": \"Packages/JavaScript/JSON.sublime-syntax\" }"
+// Obviously, if you want it in a new window, you can keep the -n argument. And if you want Sublime Text not to return control to the shell until you close the file, then you can keep the -w too, but from what I can see, that only works if you are opening a file, not when creating a new one. And if you use -w, you won't be able to change the syntax from the command line. You may be better off using a plugin like ApplySyntax or writing a small Python script yourself to set the file type when a file is opened with the path C:\test\README etc.
 
 
 namespace Ephemera.NotrApp//TODO1 probably rename this.
@@ -78,7 +87,7 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
             // Tools.
             AboutMenuItem.Click += (_, __) => MiscUtils.ShowReadme("NotrApp");
             SettingsMenuItem.Click += (_, __) => EditSettings();
-            FakeDbMenuItem.Click += (_, __) => { _db.FillFake(); _db.Save(); };
+            //FakeDbMenuItem.Click += (_, __) => { _db.FillFake(); _db.Save(); };
 
             // The db.
             _db = new();
@@ -135,28 +144,14 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
             //dataGridViewQueryList.RowPostPaint += new DataGridViewRowPostPaintEventHandler(DataGridViewQueryList_RowPostPaint);
         }
 
-
-        string GetCurrentFullName(int row)
-        {
-            var fn = "";
-
-            if (row < _db.Files.Count && row >= 0)
-            {
-                fn = _db.Files[row].FullName;
-            }
-
-            return fn;
-        }
-
-
         void DgvFiles_CellMouseEnter(object? sender, DataGridViewCellEventArgs e)
         {
-            statusInfo.Text = GetCurrentFullName(e.RowIndex);
+            statusInfo.Text = GetFullName(e.RowIndex);
         }
 
         void DgvFiles_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
         {
-            OpenFile(GetCurrentFullName(e.RowIndex));
+            OpenFile(GetFullName(e.RowIndex));
         }
 
         void DgvFiles_UserDeletingRow(object? sender, DataGridViewRowCancelEventArgs e)
@@ -176,7 +171,16 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
                         using OpenFileDialog openDlg = new()
                         {
                             Title = "Select a file"
-                            //Filter = fileTypes,
+                            //Filter = fileTypes, TODO1 from settings + AllFiles
+                            // "FileFilters": [
+                            //     "Notr,ntr,notr",
+                            //     "Text,txt,csv,json",
+                            //     "Doc,doc,docx,xsl,xslx,pdf",
+                            //     "All,*"
+                            //   ],
+                            //     -->
+                            // "Notr Files|*.ntr;*.notr|Text Files|*.txt; ..."
+
                         };
 
                         if (openDlg.ShowDialog() == DialogResult.OK)
@@ -193,9 +197,9 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
                 case Db.TagsOrdinal:
                     {
                         // Convert to list and pop up tag selector. When done update db list.
-                        var currentTags = dgvFiles.CurrentCell.Value.ToString()!.SplitByToken(" ").Distinct();
+                        var selcurrentTags = dgvFiles.CurrentCell.Value.ToString()!.SplitByToken(" ").Distinct();
                         Dictionary<string, bool> values = new();
-                        _db.AllTags.ForEach(t => values[t] = currentTags.Contains(t));
+                        _db.AllTags.ForEach(t => values[t] = selcurrentTags.Contains(t));
 
                         using OptionsEditor oped = new()
                         {
@@ -230,7 +234,7 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
             {
                 case Db.FullNameOrdinal:
                     // Check for valid file.
-                    if (!File.Exists(GetCurrentFullName(e.RowIndex)))
+                    if (!File.Exists(GetFullName(e.RowIndex)))
                     {
                         dgvFiles.CancelEdit();
                     }
@@ -277,6 +281,22 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
         }
 
 
+        /// <summary>
+        /// Get the full name at the row index.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns>The name or an empty string if invalid.</returns>
+        string GetFullName(int index)
+        {
+            var fn = "";
+
+            if (index < _db.Files.Count && index >= 0)
+            {
+                fn = _db.Files[index].FullName;
+            }
+
+            return fn;
+        }
 
 
 
@@ -372,9 +392,9 @@ namespace Ephemera.NotrApp//TODO1 probably rename this.
                         restart = true;
                         break;
 
-                    case "SingleClickSelect":
-//                        filTree.SingleClickSelect = _settings.SingleClickSelect;
-                        break;
+                    // case "SingleClickSelect":
+                    //    filTree.SingleClickSelect = _settings.SingleClickSelect;
+                    //     break;
 
                     //case "SplitterPosition":
                     //    filTree.SplitterPosition = _settings.SplitterPosition;

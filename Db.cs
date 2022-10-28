@@ -62,9 +62,6 @@ namespace Ephemera.NotrApp
         public const int TagsOrdinal = 3;
         #endregion
 
-        ///// <summary>The records. Key is file path.</summary>
-        //readonly Dictionary<string, TrackedFile> _files = new();
-
         #region Properties
         public List<TrackedFile> Files { get; set; } = new();
 
@@ -135,54 +132,6 @@ namespace Ephemera.NotrApp
                     break;
             }
         }
-
-        // TODO1 any of these?
-        ///// <summary>
-        ///// Get tags associated with the path.
-        ///// </summary>
-        ///// <param name="path"></param>
-        ///// <returns></returns>
-        //public List<string>? GetTags(string path)
-        //{
-        //    var rec = _entities.GetValueOrDefault(path);
-        //    //return rec is not null ? rec.Tags : null;
-        //    return rec is not null ? rec.Tags : null;
-        //}
-
-        ///// <summary>
-        ///// Get string of tags associated with the path.
-        ///// </summary>
-        ///// <param name="path"></param>
-        ///// <returns></returns>
-        //public string GetTagsString(string path)
-        //{
-        //    string s = ""; // default
-        //    var tags = GetTags(path);
-        //    if (tags is not null && tags.Count > 0)
-        //    {
-        //        s = $" [{string.Join(" ", tags)}]";
-        //    }
-        //    return s;
-        //}
-
-        ///// <summary>
-        ///// Set tags associated with the name.
-        ///// </summary>
-        ///// <param name="fullName"></param>
-        ///// <param name="tags"></param>
-        //public void SetTags(string fullName, string id, string info, List<string> tags)
-        //{
-        //    _entities[fullName] = new(fullName, id, info, tags ?? new());
-        //}
-
-        ///// <summary>
-        ///// Remove a record.
-        ///// </summary>
-        ///// <param name="path"></param>
-        //public void Remove(string path)
-        //{
-        //    _files.Remove(path);
-        //}
         #endregion
 
         #region Internals
@@ -193,24 +142,40 @@ namespace Ephemera.NotrApp
         {
             AllTags.Clear();
             Dictionary<string, int> _tags = new();
-            Files.ForEach(f => f.Tags.SplitByToken(" ").ForEach(t => { if (!_tags.ContainsKey(t)) _tags.Add(t, 0); _tags[t]++; }));
-            _tags.OrderByDescending(t => t.Value).ForEach(t => AllTags.Add(t.Key));
+
+            foreach (var file in Files)
+            {
+                foreach (var tag in file.Tags.SplitByToken(" "))
+                {
+                    if (!_tags.ContainsKey(tag))
+                    {
+                        _tags.Add(tag, 0);
+                    }
+                    _tags[tag]++;
+                }
+            }
+            // I could scrunch this on one line:
+            //Files.ForEach(f => f.Tags.SplitByToken(" ").ForEach(t => { if (!_tags.ContainsKey(t)) _tags.Add(t, 0); _tags[t]++; }));
+            // but cleverness can be hard to read and understand.
+
+            foreach (var tag in _tags.OrderByDescending(t => t.Value))
+            {
+                AllTags.Add(tag.Key);
+            }
+            // _tags.OrderByDescending(t => t.Value).ForEach(t => AllTags.Add(t.Key));
         }
 
         /// <summary>
         /// Debug stuff.
         /// </summary>
-        public void FillFake()
+        void FillFake(int num = 10)
         {
             Files.Clear();
             AllTags.Clear();
 
-            var rnd = new Random(DateTime.Now.Millisecond);
-
-            for (int i = 1; i < rnd.Next(5, 10); i++)
+            for (int i = 1; i < num; i++)
             {
                 var e = new TrackedFile($"FullName{i}", $"Id{i}", $"Info{i}", "TAG1 TAG2 TAG3");
-                //var e = new TrackedFile(FullName: $"FullName{i}", Id: $"Id{i}", Info: $"Info{i}", Tags: "TAG1 TAG2 TAG3");
                 Files.Add(e);
             }
         }
