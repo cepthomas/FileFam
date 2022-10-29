@@ -18,6 +18,7 @@
 // subl --command "new_file { \"syntax\": \"Packages/JavaScript/JSON.sublime-syntax\" }"
 // Obviously, if you want it in a new window, you can keep the -n argument. And if you want Sublime Text not to return control to the shell until you close the file, then you can keep the -w too, but from what I can see, that only works if you are opening a file, not when creating a new one. And if you use -w, you won't be able to change the syntax from the command line. You may be better off using a plugin like ApplySyntax or writing a small Python script yourself to set the file type when a file is opened with the path C:\test\README etc.
 
+// Tags and Id are case insensitive (not and converted to lower case). Because.
 
 # UI
 

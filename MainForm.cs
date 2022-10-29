@@ -61,7 +61,7 @@ namespace Ephemera.FileFam
             //KeyPreview = true; // for routing kbd strokes through OnKeyDown first.
 
             // Other UI items.
-            ToolStrip.Renderer = new NBagOfUis.CheckBoxRenderer() { SelectedColor = _settings.ControlColor };
+            // ToolStrip.Renderer = new NBagOfUis.CheckBoxRenderer() { SelectedColor = _settings.ControlColor };
             ddbTags.DropDown.Closing += (object? sender, ToolStripDropDownClosingEventArgs e) =>
             {
                 e.Cancel = e.CloseReason == ToolStripDropDownCloseReason.ItemClicked;
@@ -110,13 +110,13 @@ namespace Ephemera.FileFam
             dgvFiles.DataSource = _bs;
 
             // Set widths from settings.
-            dgvFiles.Columns[Db.FullNameOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            dgvFiles.Columns[Db.FullNameOrdinal].Width = _settings.FullNameWidth;
-            dgvFiles.Columns[Db.IdOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            dgvFiles.Columns[Db.IdOrdinal].Width = _settings.IdWidth;
-            dgvFiles.Columns[Db.InfoOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            dgvFiles.Columns[Db.InfoOrdinal].Width = _settings.InfoWidth;
-            dgvFiles.Columns[Db.TagsOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            dgvFiles.Columns[Ordinal.FullName].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Ordinal.FullName].Width = _settings.FullNameWidth;
+            dgvFiles.Columns[Ordinal.Id].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Ordinal.Id].Width = _settings.IdWidth;
+            dgvFiles.Columns[Ordinal.Info].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Ordinal.Info].Width = _settings.InfoWidth;
+            dgvFiles.Columns[Ordinal.Tags].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 
             // Event handlers.
             dgvFiles.ColumnHeaderMouseClick += DgvFiles_ColumnHeaderMouseClick;
@@ -204,9 +204,9 @@ namespace Ephemera.FileFam
             //var colsel = dgvFiles.Columns[e.ColumnIndex];
             switch (e.ColumnIndex)
             {
-                case Db.FullNameOrdinal:
+                case Ordinal.FullName:
                     {
-                        StringBuilder sb = new();
+                        StringBuilder sb = new();//TODO1 this looks ugly - fix.
                         for (int f = 0; f < _settings.FileFilters.Count; f++)
                         {
                             var filter = _settings.FileFilters[f];
@@ -257,7 +257,7 @@ namespace Ephemera.FileFam
                     }
                     break;
 
-                case Db.TagsOrdinal:
+                case Ordinal.Tags:
                     {
                         // Convert to list and pop up tag selector. When done update db list.
                         var selcurrentTags = dgvFiles.CurrentCell.Value.ToString()!.SplitByToken(" ").Distinct();
@@ -284,15 +284,15 @@ namespace Ephemera.FileFam
                     }
                     break;
 
-                case Db.IdOrdinal:
-                case Db.InfoOrdinal:
+                case Ordinal.Id:
+                case Ordinal.Info:
                     // Don't care.
                     break;
             }
         }
 
         /// <summary>
-        /// 
+        /// Validate cell edits.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -300,23 +300,28 @@ namespace Ephemera.FileFam
         {
             switch (e.ColumnIndex)
             {
-                case Db.FullNameOrdinal:
+                case Ordinal.FullName:
                     // Check for valid file.
-                    if (!File.Exists(GetFullName(e.RowIndex)))
+                    var fn = GetFullName(e.RowIndex);
+                    if (!File.Exists(fn))
                     {
+                        _logger.Warn($"Inalid file: {fn}");
                         dgvFiles.CancelEdit();
                     }
+                    // TODO1 Check for duplicate entry.
+                    // if 
+
                     break;
 
-                case Db.IdOrdinal:
+                case Ordinal.Id:
                     // Clean invalid chars.
                     var id = dgvFiles.CurrentCell.Value.ToString()!.Replace(' ', '_');
-                    // TODO1 Check for uniqueness.
+                    // TODO1 Check for duplicate entry.
                     dgvFiles.CurrentCell.Value = id;
                     break;
 
-                case Db.TagsOrdinal:
-                case Db.InfoOrdinal:
+                case Ordinal.Tags: // Validated above.
+                case Ordinal.Info: // Free form text.
                     break;
             }
         }
@@ -357,8 +362,8 @@ namespace Ephemera.FileFam
 
             if (ok)
             {
-                var ext = Path.GetExtension(fn).ToLower();
-                var baseFn = Path.GetFileName(fn);
+                // var ext = Path.GetExtension(fn).ToLower();
+                // var baseFn = Path.GetFileName(fn);
 
                 // Valid file name.
                 _logger.Info($"Opening file: {fn}");
@@ -381,12 +386,10 @@ namespace Ephemera.FileFam
         string GetFullName(int index)
         {
             var fn = "";
-
             if (index < _db.Files.Count && index >= 0)
             {
                 fn = _db.Files[index].FullName;
             }
-
             return fn;
         }
         #endregion

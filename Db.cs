@@ -10,8 +10,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfTricks;
-
-// TODO1 should Tags and Id be case insensitive?
+using System.Linq.Expressions;
+using System.Collections;
 
 namespace Ephemera.FileFam
 {
@@ -47,20 +47,23 @@ namespace Ephemera.FileFam
         }
     }
 
+
+
     /// <summary>
     /// Storage for tracked files and tags. Could be sqlite also.
     /// </summary>
-    public sealed class Db
+    public sealed class Db //: IQueryable<TrackedFile>
     {
         #region Fields
         /// <summary>The filename if available.</summary>
         string _fn = "";
+        #endregion
 
-        /// <summary>API convenience. Must match TrackedFile. TODO1 smarter way?</summary>
-        public const int FullNameOrdinal = 0;
-        public const int IdOrdinal = 1;
-        public const int InfoOrdinal = 2;
-        public const int TagsOrdinal = 3;
+        #region API convenience - must match TrackedFile
+        public const int FullName = 0;
+        public const int Id = 1;
+        public const int Info = 2;
+        public const int Tags = 3;
         #endregion
 
         #region Properties
@@ -69,6 +72,25 @@ namespace Ephemera.FileFam
         /// <summary>All tags in order from most common. Cached, not persisted.</summary>
         public List<string> AllTags { get; set; } = new();
         #endregion
+
+
+        //public Type ElementType => typeof(TrackedFile);
+
+        //public Expression Expression => throw new NotImplementedException();
+
+        //public IQueryProvider Provider => throw new NotImplementedException();
+
+        //public IEnumerator<TrackedFile> GetEnumerator()
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+        //IEnumerator IEnumerable.GetEnumerator()
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+
 
         #region Lifecycle
         /// <summary>
@@ -125,19 +147,19 @@ namespace Ephemera.FileFam
 
             switch (ordinal)
             {
-                case FullNameOrdinal:
+                case FullName:
                     Files.Sort((a, b) => dir * a.FullName.CompareTo(b.FullName));
                     break;
 
-                case IdOrdinal:
+                case Id:
                     Files.Sort((a, b) => dir * a.Id.CompareTo(b.Id));
                     break;
 
-                case InfoOrdinal:
+                case Info:
                     Files.Sort((a, b) => dir * a.Info.CompareTo(b.Info));
                     break;
 
-                case TagsOrdinal:
+                case Tags:
                     Files.Sort((a, b) => dir * a.Tags.CompareTo(b.Tags));
                     break;
 
@@ -169,7 +191,7 @@ namespace Ephemera.FileFam
             }
             // I could scrunch this on one line:
             //Files.ForEach(f => f.Tags.SplitByToken(" ").ForEach(t => { if (!_tags.ContainsKey(t)) _tags.Add(t, 0); _tags[t]++; }));
-            // but cleverness can be hard to read and understand.
+            // but cleverness can be hard to read and understand and change.
 
             foreach (var tag in _tags.OrderByDescending(t => t.Value))
             {

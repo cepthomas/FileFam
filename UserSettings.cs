@@ -15,11 +15,11 @@ namespace Ephemera.FileFam
     public sealed class UserSettings : SettingsCore
     {
         #region Persisted Editable Properties
-        [DisplayName("Control Color")]
-        [Description("Pick what you like.")]
-        [Browsable(true)]
-        [JsonConverter(typeof(JsonColorConverter))]
-        public Color ControlColor { get; set; } = Color.MediumOrchid;
+        // [DisplayName("Control Color")]
+        // [Description("Pick what you like.")]
+        // [Browsable(true)]
+        // [JsonConverter(typeof(JsonColorConverter))]
+        // public Color ControlColor { get; set; } = Color.MediumOrchid;
 
         [DisplayName("Filters")]
         [Description("Select only these file types.")]
