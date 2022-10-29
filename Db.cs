@@ -52,7 +52,7 @@ namespace Ephemera.FileFam
     /// <summary>
     /// Storage for tracked files and tags. Could be sqlite also.
     /// </summary>
-    public sealed class Db //: IQueryable<TrackedFile>
+    public sealed class Db : IEnumerable<TrackedFile> //: IQueryable<TrackedFile>
     {
         #region Fields
         /// <summary>The filename if available.</summary>
@@ -60,36 +60,60 @@ namespace Ephemera.FileFam
         #endregion
 
         #region API convenience - must match TrackedFile
-        public const int FullName = 0;
-        public const int Id = 1;
-        public const int Info = 2;
-        public const int Tags = 3;
+        public const int FullNameOrdinal = 0;
+        public const int IdOrdinal = 1;
+        public const int InfoOrdinal = 2;
+        public const int TagsOrdinal = 3;
         #endregion
 
+        //IQueryable<T> Paginate<T>(this IQueryable<T> query, int skip, int take)
+        //{
+        //    return query.Skip(skip).Take(take);
+        //}
+
+
         #region Properties
-        public List<TrackedFile> Files { get; set; } = new();
+        /*public*/
+        List<TrackedFile> _files = new();
 
         /// <summary>All tags in order from most common. Cached, not persisted.</summary>
         public List<string> AllTags { get; set; } = new();
         #endregion
 
 
-        //public Type ElementType => typeof(TrackedFile);
+        //public Type ElementType => throw new NotImplementedException();//typeof(TrackedFile);
 
         //public Expression Expression => throw new NotImplementedException();
 
         //public IQueryProvider Provider => throw new NotImplementedException();
 
-        //public IEnumerator<TrackedFile> GetEnumerator()
-        //{
-        //    throw new NotImplementedException();
-        //}
 
-        //IEnumerator IEnumerable.GetEnumerator()
-        //{
-        //    throw new NotImplementedException();
-        //}
 
+        public IEnumerator<TrackedFile> GetEnumerator()
+        {
+            return _files.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return _files.GetEnumerator();
+        }
+
+
+        /// <summary>
+        /// Get the full name at the row index.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns>The name or an empty string if invalid.</returns>
+        public string GetFullName(int index)
+        {
+            var fn = "";
+            if (index < _files.Count && index >= 0)
+            {
+                fn = _files[index].FullName;
+            }
+            return fn;
+        }
 
 
         #region Lifecycle
@@ -107,7 +131,7 @@ namespace Ephemera.FileFam
                 JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
                 string json = File.ReadAllText(fn);
                 var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
-                records.ForEach(r => Files.Add(r));
+                records.ForEach(r => _files.Add(r));
                 UpdateTags();
             }
             catch
@@ -129,7 +153,7 @@ namespace Ephemera.FileFam
         {
             _fn = fn == "" ? _fn : fn;
             JsonSerializerOptions opts = new() { WriteIndented = true };
-            var recs = Files;
+            var recs = _files;
             string json = JsonSerializer.Serialize(recs, typeof(List<TrackedFile>), opts);
             File.WriteAllText(_fn, json);
         }
@@ -147,20 +171,20 @@ namespace Ephemera.FileFam
 
             switch (ordinal)
             {
-                case FullName:
-                    Files.Sort((a, b) => dir * a.FullName.CompareTo(b.FullName));
+                case FullNameOrdinal:
+                    _files.Sort((a, b) => dir * a.FullName.CompareTo(b.FullName));
                     break;
 
-                case Id:
-                    Files.Sort((a, b) => dir * a.Id.CompareTo(b.Id));
+                case IdOrdinal:
+                    _files.Sort((a, b) => dir * a.Id.CompareTo(b.Id));
                     break;
 
-                case Info:
-                    Files.Sort((a, b) => dir * a.Info.CompareTo(b.Info));
+                case InfoOrdinal:
+                    _files.Sort((a, b) => dir * a.Info.CompareTo(b.Info));
                     break;
 
-                case Tags:
-                    Files.Sort((a, b) => dir * a.Tags.CompareTo(b.Tags));
+                case TagsOrdinal:
+                    _files.Sort((a, b) => dir * a.Tags.CompareTo(b.Tags));
                     break;
 
                 default:
@@ -178,7 +202,29 @@ namespace Ephemera.FileFam
             AllTags.Clear();
             Dictionary<string, int> _tags = new();
 
-            foreach (var file in Files)
+            _files
+                .ForEach(f => f.Tags.SplitByToken(" ")
+                .ForEach(t =>
+                {
+                    if (!_tags.ContainsKey(t))
+                    {
+                        _tags.Add(t, 0);
+                    }
+                    _tags[t]++;
+                }
+            ));
+
+            _tags
+                .OrderByDescending(t => t.Value)
+                .ForEach(t => AllTags.Add(t.Key));
+        }
+
+        void UpdateTags_simple()
+        {
+            AllTags.Clear();
+            Dictionary<string, int> _tags = new();
+
+            foreach (var file in _files)
             {
                 foreach (var tag in file.Tags.SplitByToken(" "))
                 {
@@ -205,13 +251,13 @@ namespace Ephemera.FileFam
         /// </summary>
         void FillFake(int num = 10)
         {
-            Files.Clear();
+            _files.Clear();
             AllTags.Clear();
 
             for (int i = 1; i < num; i++)
             {
                 var e = new TrackedFile($"FullName{i}", $"Id{i}", $"Info{i}", "TAG1 TAG2 TAG3");
-                Files.Add(e);
+                _files.Add(e);
             }
         }
         #endregion

@@ -100,7 +100,7 @@ namespace Ephemera.FileFam
         {
             _bs.AllowNew = true; // need this so add works
             //_bsQuery.SupportsSorting = true;
-            _bs.DataSource = _db.Files;
+            _bs.DataSource = _db;//.Files;
 
             //dgvFiles.AutoGenerateColumns = false;
             //dgvFiles.AllowUserToAddRows = true;
@@ -110,13 +110,13 @@ namespace Ephemera.FileFam
             dgvFiles.DataSource = _bs;
 
             // Set widths from settings.
-            dgvFiles.Columns[Ordinal.FullName].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            dgvFiles.Columns[Ordinal.FullName].Width = _settings.FullNameWidth;
-            dgvFiles.Columns[Ordinal.Id].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            dgvFiles.Columns[Ordinal.Id].Width = _settings.IdWidth;
-            dgvFiles.Columns[Ordinal.Info].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-            dgvFiles.Columns[Ordinal.Info].Width = _settings.InfoWidth;
-            dgvFiles.Columns[Ordinal.Tags].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            dgvFiles.Columns[Db.FullNameOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Db.FullNameOrdinal].Width = _settings.FullNameWidth;
+            dgvFiles.Columns[Db.IdOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Db.IdOrdinal].Width = _settings.IdWidth;
+            dgvFiles.Columns[Db.InfoOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+            dgvFiles.Columns[Db.InfoOrdinal].Width = _settings.InfoWidth;
+            dgvFiles.Columns[Db.TagsOrdinal].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 
             // Event handlers.
             dgvFiles.ColumnHeaderMouseClick += DgvFiles_ColumnHeaderMouseClick;
@@ -170,7 +170,7 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         void DgvFiles_CellMouseEnter(object? sender, DataGridViewCellEventArgs e)
         {
-            statusInfo.Text = GetFullName(e.RowIndex);
+            statusInfo.Text = _db.GetFullName(e.RowIndex);
         }
 
         /// <summary>
@@ -180,7 +180,7 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         void DgvFiles_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
         {
-            OpenFile(GetFullName(e.RowIndex));
+            OpenFile(_db.GetFullName(e.RowIndex));
         }
 
         /// <summary>
@@ -204,7 +204,7 @@ namespace Ephemera.FileFam
             //var colsel = dgvFiles.Columns[e.ColumnIndex];
             switch (e.ColumnIndex)
             {
-                case Ordinal.FullName:
+                case Db.FullNameOrdinal:
                     {
                         StringBuilder sb = new();//TODO1 this looks ugly - fix.
                         for (int f = 0; f < _settings.FileFilters.Count; f++)
@@ -257,7 +257,7 @@ namespace Ephemera.FileFam
                     }
                     break;
 
-                case Ordinal.Tags:
+                case Db.TagsOrdinal:
                     {
                         // Convert to list and pop up tag selector. When done update db list.
                         var selcurrentTags = dgvFiles.CurrentCell.Value.ToString()!.SplitByToken(" ").Distinct();
@@ -284,8 +284,8 @@ namespace Ephemera.FileFam
                     }
                     break;
 
-                case Ordinal.Id:
-                case Ordinal.Info:
+                case Db.IdOrdinal:
+                case Db.InfoOrdinal:
                     // Don't care.
                     break;
             }
@@ -300,9 +300,9 @@ namespace Ephemera.FileFam
         {
             switch (e.ColumnIndex)
             {
-                case Ordinal.FullName:
+                case Db.FullNameOrdinal:
                     // Check for valid file.
-                    var fn = GetFullName(e.RowIndex);
+                    var fn = _db.GetFullName(e.RowIndex);
                     if (!File.Exists(fn))
                     {
                         _logger.Warn($"Inalid file: {fn}");
@@ -313,15 +313,15 @@ namespace Ephemera.FileFam
 
                     break;
 
-                case Ordinal.Id:
+                case Db.IdOrdinal:
                     // Clean invalid chars.
                     var id = dgvFiles.CurrentCell.Value.ToString()!.Replace(' ', '_');
                     // TODO1 Check for duplicate entry.
                     dgvFiles.CurrentCell.Value = id;
                     break;
 
-                case Ordinal.Tags: // Validated above.
-                case Ordinal.Info: // Free form text.
+                case Db.TagsOrdinal: // Validated above.
+                case Db.InfoOrdinal: // Free form text.
                     break;
             }
         }
@@ -378,20 +378,20 @@ namespace Ephemera.FileFam
             }
         }
 
-        /// <summary>
-        /// Get the full name at the row index.
-        /// </summary>
-        /// <param name="index"></param>
-        /// <returns>The name or an empty string if invalid.</returns>
-        string GetFullName(int index)
-        {
-            var fn = "";
-            if (index < _db.Files.Count && index >= 0)
-            {
-                fn = _db.Files[index].FullName;
-            }
-            return fn;
-        }
+        ///// <summary>
+        ///// Get the full name at the row index.
+        ///// </summary>
+        ///// <param name="index"></param>
+        ///// <returns>The name or an empty string if invalid.</returns>
+        //string GetFullName(int index)
+        //{
+        //    var fn = "";
+        //    if (index < _db.Files.Count && index >= 0)
+        //    {
+        //        fn = _db.Files[index].FullName;
+        //    }
+        //    return fn;
+        //}
         #endregion
 
         #region Settings
