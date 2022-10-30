@@ -33,6 +33,8 @@
             this.AboutMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.FakeDbMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
+            this.btnOpenDb = new System.Windows.Forms.ToolStripButton();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
@@ -43,8 +45,7 @@
             this.tvLog = new Ephemera.NBagOfUis.TextViewer();
             this.timer = new System.Windows.Forms.Timer(this.components);
             this.dgvFiles = new System.Windows.Forms.DataGridView();
-            this.btnOpenDb = new System.Windows.Forms.ToolStripButton();
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.FileList = new System.Windows.Forms.ListView();
             this.ToolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvFiles)).BeginInit();
@@ -95,7 +96,7 @@
             // 
             this.ddaToolStripMenuItem.CheckOnClick = true;
             this.ddaToolStripMenuItem.Name = "ddaToolStripMenuItem";
-            this.ddaToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.ddaToolStripMenuItem.Size = new System.Drawing.Size(174, 26);
             this.ddaToolStripMenuItem.Text = "dda";
             // 
             // ddbToolStripMenuItem
@@ -105,25 +106,25 @@
             this.ddbToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ddbToolStripMenuItem.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.ddbToolStripMenuItem.Name = "ddbToolStripMenuItem";
-            this.ddbToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.ddbToolStripMenuItem.Size = new System.Drawing.Size(174, 26);
             this.ddbToolStripMenuItem.Text = "ddb";
             // 
             // ddcToolStripMenuItem
             // 
             this.ddcToolStripMenuItem.CheckOnClick = true;
             this.ddcToolStripMenuItem.Name = "ddcToolStripMenuItem";
-            this.ddcToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.ddcToolStripMenuItem.Size = new System.Drawing.Size(174, 26);
             this.ddcToolStripMenuItem.Text = "ddc";
             // 
             // toolStripSeparator10
             // 
             this.toolStripSeparator10.Name = "toolStripSeparator10";
-            this.toolStripSeparator10.Size = new System.Drawing.Size(221, 6);
+            this.toolStripSeparator10.Size = new System.Drawing.Size(171, 6);
             // 
             // newToolStripMenuItem
             // 
             this.newToolStripMenuItem.Name = "newToolStripMenuItem";
-            this.newToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.newToolStripMenuItem.Size = new System.Drawing.Size(174, 26);
             this.newToolStripMenuItem.Text = "new...";
             // 
             // txtNewTag
@@ -170,6 +171,19 @@
             // 
             this.toolStripSeparator4.Name = "toolStripSeparator4";
             this.toolStripSeparator4.Size = new System.Drawing.Size(6, 27);
+            // 
+            // btnOpenDb
+            // 
+            this.btnOpenDb.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnOpenDb.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.btnOpenDb.Name = "btnOpenDb";
+            this.btnOpenDb.Size = new System.Drawing.Size(73, 24);
+            this.btnOpenDb.Text = "Open Db";
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 27);
             // 
             // toolStripSeparator5
             // 
@@ -232,21 +246,17 @@
             this.dgvFiles.Name = "dgvFiles";
             this.dgvFiles.RowHeadersWidth = 51;
             this.dgvFiles.RowTemplate.Height = 29;
-            this.dgvFiles.Size = new System.Drawing.Size(1011, 412);
+            this.dgvFiles.Size = new System.Drawing.Size(982, 322);
             this.dgvFiles.TabIndex = 94;
             // 
-            // btnOpenDb
+            // FileList
             // 
-            this.btnOpenDb.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.btnOpenDb.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnOpenDb.Name = "btnOpenDb";
-            this.btnOpenDb.Size = new System.Drawing.Size(99, 24);
-            this.btnOpenDb.Text = "Open Db";
-            // 
-            // toolStripSeparator1
-            // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 27);
+            this.FileList.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.FileList.Location = new System.Drawing.Point(86, 358);
+            this.FileList.Name = "FileList";
+            this.FileList.Size = new System.Drawing.Size(936, 179);
+            this.FileList.TabIndex = 95;
+            this.FileList.UseCompatibleStateImageBehavior = false;
             // 
             // MainForm
             // 
@@ -257,6 +267,7 @@
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.ToolStrip);
             this.Controls.Add(this.tvLog);
+            this.Controls.Add(this.FileList);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainForm";
             this.Text = "MainForm";
@@ -317,5 +328,6 @@
         private System.Windows.Forms.ToolStripTextBox txtNewTag;
         private System.Windows.Forms.ToolStripButton btnOpenDb;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+        private System.Windows.Forms.ListView FileList;
     }
 }

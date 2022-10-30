@@ -43,13 +43,16 @@ namespace Ephemera.FileFam
 
         #region Persisted Non-editable Persisted Properties
         [Browsable(false)]
-        public int FullNameWidth { get; set; } = 300;
+        public string ColumnWidths { get; set; } = "";
 
-        [Browsable(false)]
-        public int IdWidth { get; set; } = 200;
+        //[Browsable(false)]
+        //public int FullNameWidth { get; set; } = 300;
 
-        [Browsable(false)]
-        public int InfoWidth { get; set; } = 200;
+        //[Browsable(false)]
+        //public int IdWidth { get; set; } = 200;
+
+        //[Browsable(false)]
+        //public int InfoWidth { get; set; } = 200;
         #endregion
     }
 }
