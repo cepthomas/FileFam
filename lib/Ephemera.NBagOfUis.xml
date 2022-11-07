@@ -542,7 +542,7 @@
         </member>
         <member name="M:Ephemera.NBagOfUis.MultipleChoiceSelector.#ctor">
             <summary>
-            Coonstructor.
+            Constructor.
             </summary>
         </member>
         <member name="M:Ephemera.NBagOfUis.MultipleChoiceSelector.SetOptions(System.Collections.Generic.List{System.String})">
@@ -560,12 +560,6 @@
         <member name="F:Ephemera.NBagOfUis.OptionsEditor.lbValues">
             <summary>Control.</summary>
         </member>
-        <member name="F:Ephemera.NBagOfUis.OptionsEditor.btnCancel">
-            <summary>Control.</summary>
-        </member>
-        <member name="F:Ephemera.NBagOfUis.OptionsEditor.btnOk">
-            <summary>Control.</summary>
-        </member>
         <member name="F:Ephemera.NBagOfUis.OptionsEditor.btnAdd">
             <summary>Control.</summary>
         </member>
@@ -575,9 +569,6 @@
         <member name="P:Ephemera.NBagOfUis.OptionsEditor.Values">
             <summary>The values to edit. Key is text, value is bool enable. Clone in case user cancels.</summary>
         </member>
-        <member name="P:Ephemera.NBagOfUis.OptionsEditor.Title">
-            <summary>Custom label.</summary>
-        </member>
         <member name="P:Ephemera.NBagOfUis.OptionsEditor.AllowEdit">
             <summary>If true, user can add and delete values, otherwise just select.</summary>
         </member>
@@ -585,6 +576,12 @@
             <summary>
             Constructor.
             </summary>
+        </member>
+        <member name="M:Ephemera.NBagOfUis.OptionsEditor.OnLoad(System.EventArgs)">
+            <summary>
+            Create everything.
+            </summary>
+            <param name="e"></param>
         </member>
         <member name="M:Ephemera.NBagOfUis.OptionsEditor.Add_Click(System.Object,System.EventArgs)">
             <summary>
@@ -598,12 +595,6 @@
             User might be removing a value.
             </summary>
             <param name="sender"></param>
-            <param name="e"></param>
-        </member>
-        <member name="M:Ephemera.NBagOfUis.OptionsEditor.OnFormClosing(System.Windows.Forms.FormClosingEventArgs)">
-            <summary>
-            Collect list contents.
-            </summary>
             <param name="e"></param>
         </member>
         <member name="M:Ephemera.NBagOfUis.OptionsEditor.Adjust">

@@ -19,7 +19,6 @@ using Ephemera.NBagOfTricks;
 
 // https://www.linqpad.net/WhyLINQBeatsSQL.aspx
 // 
-// 
 // var query =
 //    from c in db.Customers
 //    where c.Name.StartsWith ("A")
@@ -28,25 +27,29 @@ using Ephemera.NBagOfTricks;
 // 
 // var thirdPage = query.Skip(20).Take(10);
 // 
-// 
-// You might have noticed another more subtle (but important) benefit of the LINQ approach. We chose to compose the query in two steps—and this allows us to // generalize the second step into a reusable method as follows:
+// You might have noticed another more subtle (but important) benefit of the LINQ approach. We chose to compose the query in two steps—and this allows us to 
+// generalize the second step into a reusable method as follows:
 // 
 // IQueryable<T> Paginate<T> (this IQueryable<T> query, int skip, int take)
 // {
 //    return query.Skip(skip).Take(take);
 // }
+//
 // We can then do this:
-// 
 // var query = ...
 // var thirdPage = query.Paginate (20, 10);
-// The important thing, here, is that we can apply our Paginate method to any query. In other words, with LINQ you can break down a query into parts, and then re-use // some of those parts across your application.
+// The important thing, here, is that we can apply our Paginate method to any query. In other words, with LINQ you can break down a query into parts, and then re-use 
+// some of those parts across your application.
 // 
-// Another benefit of LINQ is that you can query across relationships without having to join. For instance, suppose we want to list all purchases of $1000 or greater // made by customers who live in Washington. To make it interesting, we'll assume purchases are itemized (the classic Purchase / PurchaseItem scenario) and that we // also want to include cash sales (with no customer). This requires querying across four tables (Purchase, Customer, Address and PurchaseItem). In LINQ, the query // is effortless:
+// Another benefit of LINQ is that you can query across relationships without having to join. For instance, suppose we want to list all purchases of $1000 or greater 
+// made by customers who live in Washington. To make it interesting, we'll assume purchases are itemized (the classic Purchase / PurchaseItem scenario) and that we 
+// also want to include cash sales (with no customer). This requires querying across four tables (Purchase, Customer, Address and PurchaseItem). In LINQ, the query 
+// is effortless:
 // 
 // from p in db.Purchases
-// where p.Customer.Address.State == "WA" || p.Customer == null
-// where p.PurchaseItems.Sum (pi => pi.SaleAmount) > 1000
-// select p
+//     where p.Customer.Address.State == "WA" || p.Customer == null
+//     where p.PurchaseItems.Sum (pi => pi.SaleAmount) > 1000
+//     select p
 
 
 

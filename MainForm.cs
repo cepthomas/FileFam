@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Drawing;
@@ -417,7 +417,21 @@ namespace Ephemera.FileFam
                             Location = Cursor.Position
                         };
 
-                        if (oped.ShowDialog() == DialogResult.OK)
+                        using Form f = new()
+                        {
+                            Text = title,
+                            ClientSize = new(450, height),
+                            AutoScaleMode = AutoScaleMode.None,
+                            Location = Cursor.Position,
+                            StartPosition = FormStartPosition.Manual,
+                            FormBorderStyle = FormBorderStyle.SizableToolWindow,
+                            ShowIcon = false,
+                            ShowInTaskbar = false
+                        };
+
+                        f.Controls.Add(oped);
+
+                        if (f.ShowDialog() == DialogResult.OK)
                         {
                             var selVals = oped.Values.Where(v => v.Value).Select(v => v.Key);
                             dgvFiles.CurrentCell.Value = string.Join(" ", selVals);
