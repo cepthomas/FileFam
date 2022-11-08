@@ -15,120 +15,85 @@ using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfTricks;
 
 
-
-
 // https://www.linqpad.net/WhyLINQBeatsSQL.aspx
-// 
 // var query =
 //    from c in db.Customers
-//    where c.Name.StartsWith ("A")
+//    where c.Name.StartsWith ("A") || "B"
 //    orderby c.Name
 //    select c.Name.ToUpper();
-// 
 // var thirdPage = query.Skip(20).Take(10);
-// 
 // You might have noticed another more subtle (but important) benefit of the LINQ approach. We chose to compose the query in two steps—and this allows us to 
 // generalize the second step into a reusable method as follows:
-// 
 // IQueryable<T> Paginate<T> (this IQueryable<T> query, int skip, int take)
 // {
 //    return query.Skip(skip).Take(take);
 // }
-//
-// We can then do this:
-// var query = ...
-// var thirdPage = query.Paginate (20, 10);
-// The important thing, here, is that we can apply our Paginate method to any query. In other words, with LINQ you can break down a query into parts, and then re-use 
-// some of those parts across your application.
-// 
-// Another benefit of LINQ is that you can query across relationships without having to join. For instance, suppose we want to list all purchases of $1000 or greater 
-// made by customers who live in Washington. To make it interesting, we'll assume purchases are itemized (the classic Purchase / PurchaseItem scenario) and that we 
-// also want to include cash sales (with no customer). This requires querying across four tables (Purchase, Customer, Address and PurchaseItem). In LINQ, the query 
-// is effortless:
-// 
-// from p in db.Purchases
-//     where p.Customer.Address.State == "WA" || p.Customer == null
-//     where p.PurchaseItems.Sum (pi => pi.SaleAmount) > 1000
-//     select p
 
 
+//DataStore.Records.Remove(rec!);
+//DataStore.Records.Where(rec => rec.Tags.SplitByToken(" ").Intersect(filterTags).Any()) :
+//                DataStore.Records;
+//DataStore.Records.Clear();
+//DataStore.Records.Add(new()
 
 
 namespace Ephemera.FileFam
 {
-    /// <summary>The persisted record template.</summary>
-    [Serializable]
-    public class TrackedFile
-    {
-        public string FullName { get; set; } = "???";
-        public string Id { get; set; } = "iii";
-        public string Tags { get; set; } = "ttt";
-        public DateTime LastAccess { get; set; } = DateTime.Now;
-        public string Info { get; set; } = "---";
-
-        /// <summary>
-        /// Default constructor.
-        /// </summary>
-        public TrackedFile()
-        {
-        }
-
-        ///// <summary>
-        ///// Full constructor
-        ///// </summary>
-        ///// <param name="fullName"></param>
-        ///// <param name="id"></param>
-        ///// <param name="info"></param>
-        ///// <param name="tags"></param>
-        //public TrackedFile(string fullName, string id, string info, string tags)
-        //{
-        //    FullName = fullName;
-        //    Id = id;
-        //    Info = info;
-        //    Tags = tags;
-        //}
-    }
-
-
-
     /// <summary>
     /// Storage for tracked files and tags. Could be sqlite also.
     /// </summary>
-    public sealed class Db : IEnumerable<TrackedFile>
+    public sealed class DataStore : IEnumerable<Record>, IList<Record>
     {
         #region Fields
         /// <summary>The filename if available.</summary>
         string _fn = "";
         #endregion
 
-        List<TrackedFile> _files = new();
+        List<Record> _records = new();
 
-        //SortableBindingList<TrackedFile> _files = new();
+        //public static List<Record> Records { get; private set; } = new(); // raw
 
-        //SortableBindingList<CalDataPoint> CalDataSet = new SortableBindingList<CalDataPoint>();
-
-        #region API convenience - must match TrackedFile TODO1 better way?
-        public const int FullNameOrdinal = 0;
-        public const int IdOrdinal = 1;
-        public const int TagsOrdinal = 2;
-        public const int LastAccessOrdinal = 3;
-        public const int InfoOrdinal = 4;
-        #endregion
+        // //public static List<ColumnSpec> ColumnSpecs { get; private set; } = new();
 
 
         #region IEnumerable implementation
-        public IEnumerator<TrackedFile> GetEnumerator()
+        public IEnumerator<Record> GetEnumerator()
         {
-            return _files.GetEnumerator();
+            return _records.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return _files.GetEnumerator();
+            return _records.GetEnumerator();
         }
         #endregion
 
 
+        #region IList implementation
+        public int Count => _records.Count;
+
+        public bool IsReadOnly => false;
+
+        public Record this[int index] { get => _records[index]; set => _records[index] = value; }
+
+        public int IndexOf(Record item) { return _records.IndexOf(item); }
+
+        public void Insert(int index, Record item) { _records.Insert(index, item); }
+
+        public void RemoveAt(int index) { _records.RemoveAt(index); }
+
+        public void Add(Record item) { _records.Add(item); }
+
+        public void Clear() { _records.Clear(); }
+
+        public bool Contains(Record item) { return _records.Contains(item); }
+
+        public void CopyTo(Record[] array, int arrayIndex) { _records.CopyTo(array, arrayIndex); }
+
+        public bool Remove(Record item) { return _records.Remove(item); }
+        #endregion
+
+        /*
 
         #region Helpers TODO1 client do these? or aka Stored procedures?
         /// <summary>All tags in order from most common.</summary>
@@ -138,7 +103,7 @@ namespace Ephemera.FileFam
 
             Dictionary<string, int> _tags = new();
 
-            _files
+            _records
                 .ForEach(f => f.Tags.SplitByToken(" ")
                 .ForEach(t =>
                 {
@@ -166,9 +131,9 @@ namespace Ephemera.FileFam
         public string GetFullName(int index)
         {
             var fn = "";
-            if (index < _files.Count && index >= 0)
+            if (index < _records.Count && index >= 0)
             {
-                fn = _files[index].FullName;
+                fn = _records[index].FullName;
             }
             return fn;
         }
@@ -186,23 +151,23 @@ namespace Ephemera.FileFam
             switch (ordinal)
             {
                 case FullNameOrdinal:
-                    _files.Sort((a, b) => dir * a.FullName.CompareTo(b.FullName));
+                    _records.Sort((a, b) => dir * a.FullName.CompareTo(b.FullName));
                     break;
 
                 case IdOrdinal:
-                    _files.Sort((a, b) => dir * a.Id.CompareTo(b.Id));
+                    _records.Sort((a, b) => dir * a.Id.CompareTo(b.Id));
                     break;
 
                 case InfoOrdinal:
-                    _files.Sort((a, b) => dir * a.Info.CompareTo(b.Info));
+                    _records.Sort((a, b) => dir * a.Info.CompareTo(b.Info));
                     break;
 
                 case TagsOrdinal:
-                    _files.Sort((a, b) => dir * a.Tags.CompareTo(b.Tags));
+                    _records.Sort((a, b) => dir * a.Tags.CompareTo(b.Tags));
                     break;
 
                 case LastAccessOrdinal:
-                    _files.Sort((a, b) => dir * a.LastAccess.CompareTo(b.LastAccess));
+                    _records.Sort((a, b) => dir * a.LastAccess.CompareTo(b.LastAccess));
                     break;
 
                 default:
@@ -218,7 +183,7 @@ namespace Ephemera.FileFam
         //    AllTags.Clear();
         //    Dictionary<string, int> _tags = new();
 
-        //    _files
+        //    _records
         //        .ForEach(f => f.Tags.SplitByToken(" ")
         //        .ForEach(t =>
         //        {
@@ -240,7 +205,7 @@ namespace Ephemera.FileFam
         //    AllTags.Clear();
         //    Dictionary<string, int> _tags = new();
 
-        //    foreach (var file in _files)
+        //    foreach (var file in _records)
         //    {
         //        foreach (var tag in file.Tags.SplitByToken(" "))
         //        {
@@ -267,12 +232,12 @@ namespace Ephemera.FileFam
         /// </summary>
         void FillFake(int num = 10)
         {
-            _files.Clear();
+            _records.Clear();
             //            AllTags.Clear();
 
             for (int i = 1; i < num; i++)
             {
-                var e = new TrackedFile()
+                var e = new Record()
                 {
                     FullName = $"FullName{i}",
                     Id = $"Id{i}",
@@ -280,12 +245,12 @@ namespace Ephemera.FileFam
                     LastAccess = DateTime.Now,
                     Info = $"Info{i}",
                 };
-                _files.Add(e);
+                _records.Add(e);
             }
         }
 
         #endregion
-
+        */
 
 
         #region Public API
@@ -302,8 +267,8 @@ namespace Ephemera.FileFam
             {
                 JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
                 string json = File.ReadAllText(fn);
-                var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
-                records.ForEach(r => _files.Add(r));
+                var records = (List<Record>)JsonSerializer.Deserialize(json, typeof(List<Record>), opts)!;
+                records.ForEach(r => _records.Add(r));
  //               UpdateTags();
             }
             catch
@@ -325,10 +290,69 @@ namespace Ephemera.FileFam
         {
             _fn = fn == "" ? _fn : fn;
             JsonSerializerOptions opts = new() { WriteIndented = true };
-            var recs = _files;
-            string json = JsonSerializer.Serialize(recs, typeof(List<TrackedFile>), opts);
+            var recs = _records;
+            string json = JsonSerializer.Serialize(recs, typeof(List<Record>), opts);
             File.WriteAllText(_fn, json);
         }
+
         #endregion
     }
+
+
+
+    //https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/attributes/creating-custom-attributes
+    [AttributeUsage(AttributeTargets.Property)]
+    public class OrdinalAttribute : Attribute
+    {
+        public int Value { get; set; }
+        public OrdinalAttribute(int value) { Value = value; }
+    }
+
+    //// Columns.
+    //ColumnSpecs.Clear();
+
+    //// These match the order in the object.
+    //ColumnSpecs.Add(new("Number", typeof(int)));
+    //ColumnSpecs.Add(new("Name", typeof(string)));
+    //ColumnSpecs.Add(new("Touch", typeof(DateTime)));
+    //ColumnSpecs.Add(new("Tags", typeof(string)));
+    //ColumnSpecs.Add(new("Info", typeof(string)));
+
+    //var t = typeof(Record);
+    //var tps = t.GetProperties();
+    //foreach(var tp in tps)
+    //{
+    //    var pname = tp.Name;
+    //    var ptype = tp.GetType();
+
+    //    foreach (var pa in tp.GetCustomAttributes(false))
+    //    {
+    //        if (pa is OrdinalAttribute)
+    //        {
+    //            int ordinal = (pa as OrdinalAttribute)!.Value;
+    //            var name = tp.Name;
+    //            var type = tp.PropertyType;
+    //            ColumnSpecs.Add(new(name, type));//, ordinal);//);
+    //        }
+    //    }
+    //}
+    //? ColumnSpecs.Sort((a, b) => a.Ordinal.CompareTo(b.Ordinal));
+
+    public class ColumnSpec
+    {
+        //public int Ordinal { get; private set; } = -1;
+
+        public string Name { get; private set; } = "???";
+        public Type Type { get; private set; } = typeof(object);
+        public int Width { get; set; } = 0;
+
+        public ColumnSpec(string name, Type type)//, int ordinal)
+        {
+            Name = name;
+            Type = type;
+            Width = 0;
+            //Ordinal = ordinal;
+        }
+    }
+
 }
