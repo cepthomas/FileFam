@@ -7,11 +7,26 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Diagnostics;
+using System.Globalization;
+using System.Threading;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
-using System.Globalization;
-using System.Threading;
+
+
+// var query =
+//    from c in db.Customers
+//    where c.Name.StartsWith ("A") || c.Name.StartsWith ("B")
+//    orderby c.Name
+//    select c.Name.ToUpper();
+// var thirdPage = query.Skip(20).Take(10);
+// You might have noticed another more subtle (but important) benefit of the LINQ approach. We chose to compose the query in two steps—and this allows us to 
+// generalize the second step into a reusable method as follows:
+// IQueryable<T> Paginate<T> (this IQueryable<T> query, int skip, int take)
+// {
+//    return query.Skip(skip).Take(take);
+// }
+
 
 namespace Ephemera.FileFam
 {
@@ -23,10 +38,9 @@ namespace Ephemera.FileFam
 
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
-        #endregion
 
+        /// <summary>Where the data lives.</summary>
         DataStore _ds = new();
-
 
         /// <summary>Prevent resize recursion.</summary>
         bool _resizing = false;
@@ -42,8 +56,7 @@ namespace Ephemera.FileFam
 
         /// <summary>Visuals.</summary>
         const char DESC = '▼';
-
-
+        #endregion
 
         #region Lifecycle
         /// <summary>
@@ -61,9 +74,7 @@ namespace Ephemera.FileFam
             culture.DateTimeFormat.LongTimePattern = "HH:mm:ss";
             Thread.CurrentThread.CurrentCulture = culture;
 
-
-
-            // Must do this first before initializing.
+            // Must do this first before initializing further.
             string appDir = MiscUtils.GetAppDataDir("FileFam", "Ephemera");
             _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));
 
@@ -83,11 +94,66 @@ namespace Ephemera.FileFam
             // Init main form from settings.
             WindowState = FormWindowState.Normal;
             StartPosition = FormStartPosition.Manual;
-            Location = new Point(_settings.FormGeometry.X, _settings.FormGeometry.Y);
-            Size = new Size(_settings.FormGeometry.Width, _settings.FormGeometry.Height);
-            //KeyPreview = true; // for routing kbd strokes through OnKeyDown first.
+            Location = new(_settings.FormGeometry.X, _settings.FormGeometry.Y);
+            Size = new(_settings.FormGeometry.Width, _settings.FormGeometry.Height);
 
+            // The DataStore.
+            var dsfn = Path.Combine(appDir, "filefam_db.json");//TODO1 get from MRU?
+            if (!_ds.Load(dsfn))
+            {
+                _logger.Warn("Couldn't open db file so I made a new one for you");
+            }
 
+            // The tags. Get all in ds ordered by frequency.
+            Dictionary<string, bool> allTags = new();
+            Dictionary<string, int> dsTags = new();
+            _ds.TrackedFiles
+                .ForEach(f => f.Tags.SplitByToken(" ")
+                .ForEach(t =>
+                {
+                    if (!dsTags.ContainsKey(t))
+                    {
+                        dsTags.Add(t, 0);
+                    }
+                    dsTags[t]++;
+                }
+            ));
+            dsTags
+                .OrderByDescending(t => t.Value)
+                .ForEach(t => allTags.Add(t.Key, false));
+
+            optionsEdit.Options = allTags;
+            optionsEdit.OptionsChanged += OptionsEdit_OptionsChanged;
+
+            // Listview.
+            lv.FullRowSelect = true;
+            lv.GridLines = true;
+            lv.MultiSelect = false;
+            lv.View = View.Details;
+            while (_settings.ColumnWidths.Count < TrackedFile.ColumnNames.Length)
+            {
+                _settings.ColumnWidths.Add(20);
+            }
+            for (int i = 0; i < TrackedFile.ColumnNames.Length; i++)
+            {
+                string name = TrackedFile.ColumnNames[i];
+                lv.Columns.Add(name, name, _settings.ColumnWidths[i]);
+            }
+            lv.ContextMenuStrip = new();
+            lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, Lv_Add));
+            lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Delete", null, Lv_Delete));
+
+            // All interesting events.
+            lv.Click += Lv_Click;
+            //lv.DoubleClick += Lv_DoubleClick; TODO1 opens the file. Update the timestamp too.
+            lv.ColumnClick += Lv_ColumnClick;
+            lv.Resize += (_, __) => ResizeLv();
+            lv.ColumnWidthChanged += (_, __) => ResizeLv();
+
+            // Misc UI.
+            txtEdit.Visible = false;
+            txtEdit.Leave += TxtEdit_Leave;
+            txtEdit.KeyDown += TxtEdit_KeyDown;
 
             // Tools. TODO1
             //btnOpenDb.Click += OpenDb_Click;
@@ -95,21 +161,10 @@ namespace Ephemera.FileFam
             // SettingsMenuItem.Click += (_, __) => EditSettings();
             //FakeDbMenuItem.Click += (_, __) => { MakeFake(); _db.Save(); };
 
-            // The DataStore.
-            _ds = new();
-            var dsfn = Path.Combine(appDir, "filefam_db.json");//TODO1
-            if (!_ds.Load(dsfn))
-            {
-                _logger.Warn("Couldn't open db file so I made a new one for you");
-            }
-
-            /////////////////////////////////////////////////////
-
 
             Text = $"FileFam {MiscUtils.GetVersionString()}";
             lblInfo.Text = "";
         }
-
 
         /// <summary>
         /// Form is legal now. Init controls.
@@ -117,60 +172,11 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         protected override void OnLoad(EventArgs e)
         {
-
-            ///// These are only for dev. get/put from settings + all possibles.
-            lv.Location = new(5, 5);
-            //lv.Size = new(700, ClientSize.Height - 10);
-            Dictionary<string, bool> filters = new();
-            for (int i = 1; i < 10; i++)
-            {
-                filters.Add($"T{i}", i % 3 == 0);
-            }
-
-            optionsEdit.Options = filters;
-            optionsEdit.OptionsChanged += OptionsEdit_OptionsChanged;
-            //btnAll.Click += (_, __) => { _filters.Keys.ForEach(k => _filters[k] = true); optionsEdit.Options = _filters; };
-            //btnNone.Click += (_, __) => { _filters.Keys.ForEach(k => _filters[k] = false); optionsEdit.Options = _filters; };
-
-            ///// These could be in designer.
-            lv.FullRowSelect = true;
-            lv.GridLines = true;
-            lv.MultiSelect = false;
-            lv.View = View.Details;
-
-            txtEdit.Visible = false;
-
-            ///// Real/typical.
-            // Get settings. TODO1 >>>>>>>>>>>>>>>
-            List<int> colWidths = new() { 70, 100, 160, 100, 0 };
-            // Create listview.
-            for (int i = 0; i < Record.ColumnNames.Length; i++)
-            {
-                lv.Columns.Add(Record.ColumnNames[i], Record.ColumnNames[i], colWidths[i]);
-            }
-
             ShowRecords();
-
-            lv.ContextMenuStrip = new();
-            lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, Lv_Add));
-            lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Delete", null, Lv_Delete));
-
-            // All interesting events.
-            lv.Click += Lv_Click;
-            //lv.DoubleClick += Lv_DoubleClick; TODO1 probably opens the file. Update the timestamp too.
-            lv.ColumnClick += Lv_ColumnClick;
-            lv.Resize += (_, __) => ResizeLv();
-            lv.ColumnWidthChanged += (_, __) => ResizeLv();
-
-            // All interesting events.
-            txtEdit.Leave += TxtEdit_Leave;
-            txtEdit.KeyDown += TxtEdit_KeyDown;
-
             ResizeLv();
 
             base.OnLoad(e);
         }
-
 
         /// <summary>
         /// Bye-bye.
@@ -178,7 +184,7 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
- //           _db.Save();
+            _ds.Save();
             SaveSettings();
             _logger.Info("Shutting down");
             LogManager.Stop();
@@ -186,37 +192,7 @@ namespace Ephemera.FileFam
         }
         #endregion
 
-
-
-        /// <summary>
-        /// Common file opener.
-        /// </summary>
-        /// <param name="fn">The file to open.</param>
-        void OpenFile(string fn)
-        {
-            bool ok = File.Exists(fn);
-
-            if (ok)
-            {
-                // var ext = Path.GetExtension(fn).ToLower();
-                // var baseFn = Path.GetFileName(fn);
-
-                // Valid file name.
-                _logger.Info($"Opening file: {fn}");
-
-                Process.Start("explorer", "\"" + fn + "\"");
-
-                _settings.UpdateMru(fn);
-            }
-            else
-            {
-                _logger.Warn($"Invalid file: {fn}");
-            }
-        }
-
-
-
-
+        #region UI handlers
         /// <summary>
         /// Filters changed.
         /// </summary>
@@ -234,8 +210,8 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         void Lv_Add(object? sender, EventArgs e)
         {
-            var rec = new Record();
-            _ds.Add(rec);
+            var rec = new TrackedFile();
+            _ds.TrackedFiles.Add(rec);
 
             ShowRecords();
 
@@ -254,8 +230,8 @@ namespace Ephemera.FileFam
             if (lv.SelectedIndices.Count > 0)
             {
                 int row = lv.SelectedIndices[0];
-                var rec = lv.SelectedItems[0].Tag as Record;
-                _ds.Remove(rec!);
+                var rec = lv.SelectedItems[0].Tag as TrackedFile;
+                _ds.TrackedFiles.Remove(rec!);
 
                 ShowRecords();
 
@@ -293,14 +269,14 @@ namespace Ephemera.FileFam
                 colhdr.Text = colhdr.Name;
             }
 
-            var selRecordId = (lv.SelectedItems[0].Tag as Record)!.Id;
+            var selRecordId = (lv.SelectedItems[0].Tag as TrackedFile)!.Id;
 
             ShowRecords();
 
             // Show the current selected row.
             for (int i = 0; i < lv.Items.Count; i++)
             {
-                if ((lv.Items[i].Tag as Record)!.Id == selRecordId)
+                if ((lv.Items[i].Tag as TrackedFile)!.Id == selRecordId)
                 {
                     lv.Items[i].Selected = true;
                     break;
@@ -322,7 +298,7 @@ namespace Ephemera.FileFam
             {
                 var pt = PointToClient(MousePosition);
                 var hitTestInfo = lv.HitTest(pt);
-                var record = hitTestInfo.Item.Tag as Record;
+                var record = hitTestInfo.Item.Tag as TrackedFile;
                 var subItem = hitTestInfo.SubItem;
                 _selColumn = hitTestInfo.Item.SubItems.IndexOf(subItem);
 
@@ -386,7 +362,7 @@ namespace Ephemera.FileFam
             if (txtEdit.Text != "")
             {
                 // Save the contents.
-                var record = lv.SelectedItems[0].Tag as Record;
+                var record = lv.SelectedItems[0].Tag as TrackedFile;
                 bool ok = record!.Parse(txtEdit.Text, _selColumn);
 
                 if (ok)
@@ -402,43 +378,26 @@ namespace Ephemera.FileFam
 
             txtEdit.Visible = false;
         }
+        #endregion
 
-        /// <summary>
-        /// Does last column fill.
-        /// </summary>
-        void ResizeLv()
-        {
-            if (!_resizing) // TODO2 improve?
-            {
-                _resizing = true;
-
-                int tw = 0;
-                for (int i = 0; i < lv.Columns.Count - 1; i++)
-                {
-                    tw += lv.Columns[i].Width;
-                }
-                lv.Columns[^1].Width = lv.ClientRectangle.Width - tw;
-                _resizing = false;
-            }
-        }
-
+        #region Internal functions
         /// <summary>
         /// Sort and filter then update the listview. This is a client responsibility.
         /// </summary>
         void ShowRecords()
         {
             // IEnumerable<Record> records
-            IEnumerable<Record> sorted;
+            IEnumerable<TrackedFile> sorted;
 
             // Filter by tags.
             HashSet<string> filterTags = new();
             optionsEdit.Options.Where(o => o.Value == true).ForEach(o => filterTags.Add(o.Key));
             var qry = filterTags.Count > 0 ?
-                _ds.Where(rec => rec.Tags.SplitByToken(" ").Intersect(filterTags).Any()) :
-                _ds;
+                _ds.TrackedFiles.Where(rec => rec.Tags.SplitByToken(" ").Intersect(filterTags).Any()) :
+                _ds.TrackedFiles;
 
             // Sort by column and direction.
-            sorted = (_selColumn, _sortOrder) switch // TODO2 improve? IComparer?
+            sorted = (_selColumn, _sortOrder) switch // TODO1 improve? IComparer?
             {
                 (0, SortOrder.Ascending) => qry.OrderBy(r => r.FullName),
                 (0, SortOrder.Descending) => qry.OrderByDescending(r => r.FullName),
@@ -467,39 +426,50 @@ namespace Ephemera.FileFam
         }
 
         /// <summary>
-        /// 
+        /// Common file opener.
         /// </summary>
-        void MakeFake()
+        /// <param name="fn">The file to open.</param>
+        void OpenFile(string fn)
         {
-            List<string> strings = new()
-            {
-                "Lorem ipsum dolor sit amet", "consectetur adipiscing elit", "sed do eiusmod tempor incididunt",
-                "ut labore et dolore magna aliqua", "Ut enim ad minim veniam", "quis nostrud exercitation",
-                "ullamco laboris nisi ut aliquip ex ea commodo consequat", "Duis aute irure dolor in reprehenderit",
-                "in voluptate velit esse cillum dolore", "eu fugiat nulla pariatur", "mollit anim id est laborum",
-                "Excepteur sint occaecat cupidatat non proident", "sunt in culpa qui officia deserunt"
-            };
+            bool ok = File.Exists(fn);
 
-            // Data.
-            _ds.Clear();
-            Random rnd = new();
-            for (int i = 0; i < 50; i++)
+            if (ok)
             {
-                _ds.Add(new()
-                {
-                    FullName = $"FullName_{rnd.Next(1, 50)}",
-                    Id = $"Id_{rnd.Next(1, 50)}",
-                    LastAccess = DateTime.Now + new TimeSpan(rnd.Next(1, 1300), rnd.Next(1, 20), rnd.Next(1, 50), rnd.Next(1, 50)),
-                    Tags = $"T{rnd.Next(1, 9)} T{rnd.Next(1, 9)} T{rnd.Next(1, 9)}",
-                    Info = $"{strings[rnd.Next(1, 50) % strings.Count]} {strings[rnd.Next(1, 50) % strings.Count]}",
-                });
+                // var ext = Path.GetExtension(fn).ToLower();
+                // var baseFn = Path.GetFileName(fn);
+
+                // Valid file name.
+                _logger.Info($"Opening file: {fn}");
+
+                Process.Start("explorer", "\"" + fn + "\"");
+
+                _settings.UpdateMru(fn);
+            }
+            else
+            {
+                _logger.Warn($"Invalid file: {fn}");
             }
         }
 
+        /// <summary>
+        /// Does last column fill.
+        /// </summary>
+        void ResizeLv()
+        {
+            if (!_resizing) // TODO1 improve?
+            {
+                _resizing = true;
 
-
-
-
+                int tw = 0;
+                for (int i = 0; i < lv.Columns.Count - 1; i++)
+                {
+                    tw += lv.Columns[i].Width;
+                }
+                lv.Columns[^1].Width = lv.ClientRectangle.Width - tw;
+                _resizing = false;
+            }
+        }
+        #endregion
 
         #region Settings
         /// <summary>
@@ -516,7 +486,6 @@ namespace Ephemera.FileFam
             {
                 switch (name)
                 {
-                    case "ControlColor":
                     case "FileLogLevel":
                     case "NotifLogLevel":
                         restart = true;
@@ -526,7 +495,7 @@ namespace Ephemera.FileFam
 
             if (restart)
             {
-                MessageBox.Show("Restart required for device changes to take effect");
+                MessageBox.Show("Restart required for changes to take effect");
             }
 
             SaveSettings();
@@ -541,13 +510,55 @@ namespace Ephemera.FileFam
 
             // Column widths.
             _settings.ColumnWidths.Clear();
-            for (int i = 0; i < lv.Columns.Count - 1; i++)
+            for (int i = 0; i < lv.Columns.Count; i++)
             {
                 var col = lv.Columns[i];
                 _settings.ColumnWidths.Add(col.Width);
             }
 
+            // Selected tags.
+            _settings.CurrentTags.Clear();
+            foreach (var kv in optionsEdit.Options)
+            {
+                if (kv.Value)
+                {
+                    _settings.CurrentTags.Add(kv.Key);
+                }
+            }
+
             _settings.Save();
+        }
+        #endregion
+
+        #region Debug stuff
+        /// <summary>
+        /// 
+        /// </summary>
+        void MakeFake()
+        {
+            List<string> strings = new()
+            {
+                "Lorem ipsum dolor sit amet", "consectetur adipiscing elit", "sed do eiusmod tempor incididunt",
+                "ut labore et dolore magna aliqua", "Ut enim ad minim veniam", "quis nostrud exercitation",
+                "ullamco laboris nisi ut aliquip ex ea commodo consequat", "Duis aute irure dolor in reprehenderit",
+                "in voluptate velit esse cillum dolore", "eu fugiat nulla pariatur", "mollit anim id est laborum",
+                "Excepteur sint occaecat cupidatat non proident", "sunt in culpa qui officia deserunt"
+            };
+
+            // Data.
+            _ds.TrackedFiles.Clear();
+            Random rnd = new();
+            for (int i = 0; i < 50; i++)
+            {
+                _ds.TrackedFiles.Add(new()
+                {
+                    FullName = $"FullName_{rnd.Next(1, 50)}",
+                    Id = $"Id_{rnd.Next(1, 50)}",
+                    LastAccess = DateTime.Now + new TimeSpan(rnd.Next(1, 1300), rnd.Next(1, 20), rnd.Next(1, 50), rnd.Next(1, 50)),
+                    Tags = $"T{rnd.Next(1, 9)} T{rnd.Next(1, 9)} T{rnd.Next(1, 9)}",
+                    Info = $"{strings[rnd.Next(1, 50) % strings.Count]} {strings[rnd.Next(1, 50) % strings.Count]}",
+                });
+            }
         }
         #endregion
     }

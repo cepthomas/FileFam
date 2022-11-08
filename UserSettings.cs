@@ -15,18 +15,12 @@ namespace Ephemera.FileFam
     public sealed class UserSettings : SettingsCore
     {
         #region Persisted Editable Properties
-        // [DisplayName("Control Color")]
-        // [Description("Pick what you like.")]
-        // [Browsable(true)]
-        // [JsonConverter(typeof(JsonColorConverter))]
-        // public Color ControlColor { get; set; } = Color.MediumOrchid;
-
         [DisplayName("Filters")]
         [Description("Select only these file types.")]
         [Category("Files")]
         [Browsable(true)]
         [Editor(typeof(StringListEditor), typeof(UITypeEditor))]
-        public List<string> FileFilters { get; set; } = new();
+        public List<string> TrackedFileFilters { get; set; } = new();
 
         [DisplayName("File Log Level")]
         [Description("Log level for file write.")]
@@ -44,6 +38,9 @@ namespace Ephemera.FileFam
         #region Persisted Non-editable Persisted Properties
         [Browsable(false)]
         public List<int> ColumnWidths { get; set; } = new();
+
+        [Browsable(false)]
+        public List<string> CurrentTags { get; set; } = new();
         #endregion
     }
 }

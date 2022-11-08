@@ -7,9 +7,9 @@ using System.Text.Json.Serialization;
 
 namespace Ephemera.FileFam
 {
-    /// <summary>The persisted record template.</summary>
+    /// <summary>The persisted record template. Analagous to one db row.</summary>
     [Serializable]
-    public class Record
+    public class TrackedFile
     {
         [Ordinal(0)]
         public string FullName { get; set; } = "???";
@@ -30,8 +30,7 @@ namespace Ephemera.FileFam
         public int UID { get; private set; } = -1;
         static int _uids = 0;
 
-
-        // #region API convenience - must match Record TODO1 better way?
+         // #region API convenience - must match Record TODO1 better way?
         // public const int FullNameOrdinal = 0;
         // public const int IdOrdinal = 1;
         // public const int LastAccessOrdinal = 2;
@@ -46,7 +45,7 @@ namespace Ephemera.FileFam
         /// <summary>Suitable for adding to listview subitems. In ordinal order.</summary>
         public static string[] ColumnNames { get { return new string[] {"FullName", "Id", "LastAccess", "Tags", "Info" }; } }
 
-        /// <summary>Suitable for adding to listview columns. In ordinal order. TODO2 or just use Values?</summary>
+        /// <summary>Suitable for adding to listview columns. In ordinal order. TODO1 or just use Values?</summary>
         public string[] ValueStrings { get { return new string[] { FullName.ToString(), Id, LastAccess.ToString(), Tags, Info }; } }
 
         /// <summary>
@@ -69,11 +68,11 @@ namespace Ephemera.FileFam
         }
 
         /// <summary>
-        /// 
+        /// Parse a string into a property.
         /// </summary>
         /// <param name="s"></param>
         /// <param name="ordinal"></param>
-        /// <returns></returns>
+        /// <returns>True if successful parse.</returns>
         /// <exception cref="InvalidOperationException"></exception>
         public bool Parse(string s, int ordinal)
         {
@@ -118,7 +117,7 @@ namespace Ephemera.FileFam
         /// <summary>
         /// Constructor assigns id.
         /// </summary>
-        public Record()
+        public TrackedFile()
         {
             // Next id.
             UID = ++_uids;
