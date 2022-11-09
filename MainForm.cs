@@ -12,16 +12,20 @@ using System.Threading;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
+using System.Text.Json;
 
 
+//Lambda Expression: Var Val = value. Where (Val<=5);
+//Query Syntax: Var Val = from val in Value Where val> 10;
+//
 // var query =
 //    from c in db.Customers
 //    where c.Name.StartsWith ("A") || c.Name.StartsWith ("B")
 //    orderby c.Name
 //    select c.Name.ToUpper();
 // var thirdPage = query.Skip(20).Take(10);
-// You might have noticed another more subtle (but important) benefit of the LINQ approach. We chose to compose the query in two steps—and this allows us to 
-// generalize the second step into a reusable method as follows:
+// You might have noticed another more subtle (but important) benefit of the LINQ approach. We chose to compose
+// the query in two steps—and this allows us to generalize the second step into a reusable method as follows:
 // IQueryable<T> Paginate<T> (this IQueryable<T> query, int skip, int take)
 // {
 //    return query.Skip(skip).Take(take);
@@ -30,20 +34,29 @@ using Ephemera.NBagOfUis;
 
 namespace Ephemera.FileFam
 {
-    public partial class MainForm : Form
+    public partial class FileFam : Form
     {
         #region Fields
         /// <summary>My logger.</summary>
-        readonly Logger _logger = LogManager.CreateLogger("MainForm");
+        readonly Logger _logger = LogManager.CreateLogger("FileFam");
 
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
-        /// <summary>Where the data lives.</summary>
-        DataStore _ds = new();
+        // /// <summary>Where the data lives.</summary>
+        // DataStore _ds = new();
+
+        /// <summary>The datastore records.</summary>
+        readonly List<TrackedFile> TrackedFiles = new();
+
+        /// <summary>The datastore filename.</summary>
+        string _dsfn = "";
 
         /// <summary>Prevent resize recursion.</summary>
         bool _resizing = false;
+
+        /// <summary>Current file is dirty.</summary>
+        bool _dirty = false;
 
         /// <summary>Current column selected for editing or sorting.</summary>
         int _selColumn = -1;
@@ -62,7 +75,7 @@ namespace Ephemera.FileFam
         /// <summary>
         /// Constructor.
         /// </summary>
-        public MainForm()
+        public FileFam()
         {
             // Improve performance and eliminate flicker.
             DoubleBuffered = true;
@@ -98,31 +111,8 @@ namespace Ephemera.FileFam
             Size = new(_settings.FormGeometry.Width, _settings.FormGeometry.Height);
 
             // The DataStore.
-            var dsfn = Path.Combine(appDir, "filefam_db.json");//TODO1 get from MRU?
-            if (!_ds.Load(dsfn))
-            {
-                _logger.Warn("Couldn't open db file so I made a new one for you");
-            }
-
-            // The tags. Get all in ds ordered by frequency.
-            Dictionary<string, bool> allTags = new();
-            Dictionary<string, int> dsTags = new();
-            _ds.TrackedFiles
-                .ForEach(f => f.Tags.SplitByToken(" ")
-                .ForEach(t =>
-                {
-                    if (!dsTags.ContainsKey(t))
-                    {
-                        dsTags.Add(t, 0);
-                    }
-                    dsTags[t]++;
-                }
-            ));
-            dsTags
-                .OrderByDescending(t => t.Value)
-                .ForEach(t => allTags.Add(t.Key, false));
-
-            optionsEdit.Options = allTags;
+            var dsfn = Path.Combine(appDir, "filefam_test.ff");//TODO1 get from MRU + settings for open-last
+            OpenFile(dsfn);
             optionsEdit.OptionsChanged += OptionsEdit_OptionsChanged;
 
             // Listview.
@@ -145,7 +135,7 @@ namespace Ephemera.FileFam
 
             // All interesting events.
             lv.Click += Lv_Click;
-            //lv.DoubleClick += Lv_DoubleClick; TODO1 opens the file. Update the timestamp too.
+            lv.DoubleClick += Lv_DoubleClick;
             lv.ColumnClick += Lv_ColumnClick;
             lv.Resize += (_, __) => ResizeLv();
             lv.ColumnWidthChanged += (_, __) => ResizeLv();
@@ -155,14 +145,17 @@ namespace Ephemera.FileFam
             txtEdit.Leave += TxtEdit_Leave;
             txtEdit.KeyDown += TxtEdit_KeyDown;
 
-            // Tools. TODO1
-            //btnOpenDb.Click += OpenDb_Click;
-            // AboutMenuItem.Click += (_, __) => MiscUtils.ShowReadme("FileFam");
-            // SettingsMenuItem.Click += (_, __) => EditSettings();
-            //FakeDbMenuItem.Click += (_, __) => { MakeFake(); _db.Save(); };
+            // File menu.
+            FileMenu.DropDownOpening += FileMenu_DropDownOpening;
+            OpenMenu.Click += OpenMenu_Click;
+            SaveMenu.Click += SaveMenu_Click;
+            SaveAsMenu.Click += SaveAsMenu_Click;
 
+            // Tools.
+            SettingsMenu.Click += (_, __) => EditSettings();
+            AboutMenu.Click += (_, __) => MiscUtils.ShowReadme("FileFam");
+            DebugMenu.Click += (_, __) => MakeFake();
 
-            Text = $"FileFam {MiscUtils.GetVersionString()}";
             lblInfo.Text = "";
         }
 
@@ -172,7 +165,7 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         protected override void OnLoad(EventArgs e)
         {
-            ShowRecords();
+            ShowRecords(0);
             ResizeLv();
 
             base.OnLoad(e);
@@ -184,7 +177,7 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            _ds.Save();
+            SaveDataStore();
             SaveSettings();
             _logger.Info("Shutting down");
             LogManager.Stop();
@@ -192,7 +185,196 @@ namespace Ephemera.FileFam
         }
         #endregion
 
-        #region UI handlers
+        #region UI menu handlers
+        /// <summary>
+        /// Show the recent ff files in the menu.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void FileMenu_DropDownOpening(object? sender, EventArgs e)
+        {
+            RecentMenu.DropDownItems.Clear();
+
+            _settings.RecentFiles.ForEach(f =>
+            {
+                ToolStripMenuItem menuItem = new(f);
+                menuItem.Click += (object? sender, EventArgs e) =>
+                {
+                    string fn = sender!.ToString()!;
+                    OpenFile(fn);
+                };
+
+                RecentMenu.DropDownItems.Add(menuItem);
+            });
+        }
+
+        /// <summary>
+        /// Allows the user to select datastore file.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        void OpenMenu_Click(object? sender, EventArgs e)
+        {
+            using OpenFileDialog openDlg = new()
+            {
+                Filter = $"FileFam Files|*.ff",
+                Title = "Open a FileFam file"
+            };
+
+            if (openDlg.ShowDialog() == DialogResult.OK)
+            {
+                var fn = openDlg.FileName;
+                OpenFile(fn);
+            }
+        }
+
+        /// <summary>
+        /// Save as a new file.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void SaveAsMenu_Click(object? sender, EventArgs e)
+        {
+            using SaveFileDialog saveDlg = new()
+            {
+                Filter = $"FileFam Files|*.ff",
+                Title = "Save a FileFam file",
+            };
+
+            if (saveDlg.ShowDialog() == DialogResult.OK)
+            {
+                SaveFile(saveDlg.FileName);
+            }
+        }
+
+        /// <summary>
+        /// Save current file.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void SaveMenu_Click(object? sender, EventArgs e)
+        {
+            SaveFile(_dsfn);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        void CloseMenu_Click(object? sender, EventArgs e)
+        {
+            // Check for dirty etc
+            throw new NotImplementedException();
+        }
+        #endregion
+
+        #region Datastore file I/O
+        /// <summary>
+        /// Common file opener.
+        /// </summary>
+        /// <param name="fn">The file to open.</param>
+        /// <returns>Success.</returns>
+        bool OpenFile(string fn)
+        {
+            bool ok = true;
+
+            try
+            {
+                // TODO1 Check for current file dirty.
+
+                // Do validity checks.
+                if (!File.Exists(fn))
+                {
+                    throw new InvalidOperationException($"Invalid file.");
+                }
+
+                var ext = Path.GetExtension(fn).ToLower();
+                var baseFn = Path.GetFileName(fn);
+
+                // Valid file name.
+                _logger.Info($"Opening file: {fn}");
+
+                if (!LoadDataStore(fn))
+                {
+                    _logger.Warn("Couldn't open db file so I made a new one for you");
+                }
+
+                // The tags. Get all in ds ordered by frequency.
+                Dictionary<string, bool> allTags = new();
+                Dictionary<string, int> dsTags = new();
+                TrackedFiles
+                    .ForEach(f => f.Tags.SplitByToken(" ")
+                    .ForEach(t =>
+                    {
+                        if (!dsTags.ContainsKey(t))
+                        {
+                            dsTags.Add(t, 0);
+                        }
+                        dsTags[t]++;
+                    }
+                ));
+
+                dsTags
+                    .OrderByDescending(t => t.Value)
+                    .ForEach(t => allTags.Add(t.Key, false));
+
+                optionsEdit.Options = allTags;
+
+                if (ok)
+                {
+                    _dirty = false;
+                    _settings.UpdateMru(fn);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Couldn't open the file: {fn} because: {ex.Message}");
+                ok = false;
+            }
+
+            UpdateUi();
+
+            return ok;
+        }
+
+        /// <summary>
+        /// Save the file.
+        /// </summary>
+        /// <param name="fn">The file to save to.</param>
+        /// <returns>Status.</returns>
+        bool SaveFile(string fn)
+        {
+            bool ok = false;
+
+            SaveDataStore();
+
+            _dirty = false;
+
+            UpdateUi();
+
+            return ok;
+        }
+
+        /// <summary>
+        /// Set UI according to system states.
+        /// </summary>
+        void UpdateUi()
+        {
+            OpenMenu.Enabled = true;
+            SaveMenu.Enabled = _dirty;
+            SaveAsMenu.Enabled = true;
+
+            AboutMenu.Enabled = true;
+            SettingsMenu.Enabled = true;
+
+            Text = $"FileFam {MiscUtils.GetVersionString()} {_dsfn}";
+        }
+        #endregion
+
+        #region UI controls handlers
         /// <summary>
         /// Filters changed.
         /// </summary>
@@ -200,7 +382,7 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         void OptionsEdit_OptionsChanged(object? sender, EventArgs e)
         {
-            ShowRecords();
+            ShowRecords(-1);
         }
 
         /// <summary>
@@ -211,13 +393,9 @@ namespace Ephemera.FileFam
         void Lv_Add(object? sender, EventArgs e)
         {
             var rec = new TrackedFile();
-            _ds.TrackedFiles.Add(rec);
-
-            ShowRecords();
-
-            // Select the added record - at end.
-            int row = lv.Items.Count - 1;
-            lv.Items[row].Selected = true;
+            TrackedFiles.Add(rec);
+            _dirty = true;
+            ShowRecords(rec.UID);
         }
 
         /// <summary>
@@ -229,18 +407,21 @@ namespace Ephemera.FileFam
         {
             if (lv.SelectedIndices.Count > 0)
             {
+                // Get the next item.
+                int nextuid = -1;
                 int row = lv.SelectedIndices[0];
-                var rec = lv.SelectedItems[0].Tag as TrackedFile;
-                _ds.TrackedFiles.Remove(rec!);
-
-                ShowRecords();
-
-                // Select the next record.
-                if (lv.Items.Count > 0)
+                if (lv.Items.Count > row + 1)
                 {
-                    row = Math.Min(row, lv.Items.Count - 1);
-                    lv.Items[row].Selected = true;
+                    var nextrec = lv.Items[row + 1].Tag as TrackedFile;
+                    nextuid = nextrec!.UID;
                 }
+
+                // Process selection.
+                var rec = lv.SelectedItems[0].Tag as TrackedFile;
+                TrackedFiles.Remove(rec!);
+                _dirty = true;
+
+                ShowRecords(nextuid);
             }
         }
 
@@ -269,26 +450,50 @@ namespace Ephemera.FileFam
                 colhdr.Text = colhdr.Name;
             }
 
-            var selRecordId = (lv.SelectedItems[0].Tag as TrackedFile)!.Id;
+            var seluid = (lv.SelectedItems[0].Tag as TrackedFile)!.UID;
 
-            ShowRecords();
-
-            // Show the current selected row.
-            for (int i = 0; i < lv.Items.Count; i++)
-            {
-                if ((lv.Items[i].Tag as TrackedFile)!.Id == selRecordId)
-                {
-                    lv.Items[i].Selected = true;
-                    break;
-                }
-            }
+            ShowRecords(seluid);
 
             // Update selected col text.
             colsel.Text = $"{name} {(_sortOrder == SortOrder.Ascending ? ASC : DESC)}";
         }
 
         /// <summary>
-        /// Starts cell editing maybe.
+        /// Opens the target file clicked by the user. Update the timestamp too.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void Lv_DoubleClick(object? sender, EventArgs e)
+        {
+            var tf = lv.SelectedItems[0].Tag as TrackedFile;
+            var fn = tf!.FullName;
+
+            bool ok = File.Exists(fn);
+
+            if (ok)
+            {
+                // var ext = Path.GetExtension(fn).ToLower();
+                // var baseFn = Path.GetFileName(fn);
+
+                // Valid file name.
+                _logger.Info($"Opening file: {fn}");
+
+                Process.Start("explorer", "\"" + fn + "\"");//TODO1 in settings
+
+                tf.LastAccess = DateTime.Now;
+                _settings.UpdateMru(fn);
+
+
+                ShowRecords(tf.UID);
+            }
+            else
+            {
+                _logger.Warn($"Invalid file: {fn}");
+            }
+        }
+
+        /// <summary>
+        /// Starts cell editing, maybe.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -367,11 +572,8 @@ namespace Ephemera.FileFam
 
                 if (ok)
                 {
-                    int row = lv.SelectedIndices[0];
-
-                    ShowRecords();
-
-                    lv.Items[row].Selected = true;
+                    _dirty = true;
+                    ShowRecords(record.UID);
                 }
             }
             // else dump
@@ -384,71 +586,55 @@ namespace Ephemera.FileFam
         /// <summary>
         /// Sort and filter then update the listview. This is a client responsibility.
         /// </summary>
-        void ShowRecords()
+        /// <param name="seluid">Put the focus on this record.</param>
+        void ShowRecords(int seluid)
         {
-            // IEnumerable<Record> records
-            IEnumerable<TrackedFile> sorted;
+            //IEnumerable<TrackedFile> sorted;
 
             // Filter by tags.
             HashSet<string> filterTags = new();
-            optionsEdit.Options.Where(o => o.Value == true).ForEach(o => filterTags.Add(o.Key));
+            optionsEdit.Options
+                .Where(o => o.Value == true)
+                .ForEach(o => filterTags.Add(o.Key));
+
             var qry = filterTags.Count > 0 ?
-                _ds.TrackedFiles.Where(rec => rec.Tags.SplitByToken(" ").Intersect(filterTags).Any()) :
-                _ds.TrackedFiles;
+                TrackedFiles.Where(rec => rec.Tags.SplitByToken(" ").Intersect(filterTags).Any()) :
+                TrackedFiles;
 
             // Sort by column and direction.
-            sorted = (_selColumn, _sortOrder) switch // TODO1 improve? IComparer?
+            var sorted = _selColumn switch
             {
-                (0, SortOrder.Ascending) => qry.OrderBy(r => r.FullName),
-                (0, SortOrder.Descending) => qry.OrderByDescending(r => r.FullName),
-                (1, SortOrder.Ascending) => qry.OrderBy(r => r.Id),
-                (1, SortOrder.Descending) => qry.OrderByDescending(r => r.Id),
-                (2, SortOrder.Ascending) => qry.OrderBy(r => r.LastAccess),
-                (2, SortOrder.Descending) => qry.OrderByDescending(r => r.LastAccess),
-                (3, SortOrder.Ascending) => qry.OrderBy(r => r.Tags),
-                (3, SortOrder.Descending) => qry.OrderByDescending(r => r.Tags),
-                (4, SortOrder.Ascending) => qry.OrderBy(r => r.Info),
-                (4, SortOrder.Descending) => qry.OrderByDescending(r => r.Info),
-                (_, _) => qry // no sort - use raw
+                0 => qry.OrderBy(r => r.FullName),
+                1 => qry.OrderBy(r => r.Id),
+                2 => qry.OrderBy(r => r.LastAccess),
+                3 => qry.OrderBy(r => r.Tags),
+                4 => qry.OrderBy(r => r.Info),
+                _ => qry // no sort - use raw
             };
+
+            var sortedOrdered = _sortOrder == SortOrder.Descending ? sorted.Reverse() : sorted;
 
             // Show the data.
             lv.SuspendLayout();
             lv.Items.Clear();
-            foreach (var d in sorted)
+            foreach (var d in sortedOrdered)
             {
                 var item = new ListViewItem(d.ValueStrings) { Tag = d };
                 lv.Items.Add(item);
             }
             lv.ResumeLayout();
 
+            // Select the requested record. TODO2 optimize?
+            for (int i = 0; i < lv.Items.Count; i++)
+            {
+                if ((lv.Items[i].Tag as TrackedFile)!.UID == seluid)
+                {
+                    lv.Items[i].Selected = true;
+                    break;
+                }
+            }
+
             lblInfo.Text = $"{lv.Items.Count} records";
-        }
-
-        /// <summary>
-        /// Common file opener.
-        /// </summary>
-        /// <param name="fn">The file to open.</param>
-        void OpenFile(string fn)
-        {
-            bool ok = File.Exists(fn);
-
-            if (ok)
-            {
-                // var ext = Path.GetExtension(fn).ToLower();
-                // var baseFn = Path.GetFileName(fn);
-
-                // Valid file name.
-                _logger.Info($"Opening file: {fn}");
-
-                Process.Start("explorer", "\"" + fn + "\"");
-
-                _settings.UpdateMru(fn);
-            }
-            else
-            {
-                _logger.Warn($"Invalid file: {fn}");
-            }
         }
 
         /// <summary>
@@ -456,7 +642,7 @@ namespace Ephemera.FileFam
         /// </summary>
         void ResizeLv()
         {
-            if (!_resizing) // TODO1 improve?
+            if (!_resizing) // TODO2 improve?
             {
                 _resizing = true;
 
@@ -468,6 +654,50 @@ namespace Ephemera.FileFam
                 lv.Columns[^1].Width = lv.ClientRectangle.Width - tw;
                 _resizing = false;
             }
+        }
+        #endregion
+
+        #region Datastore persistence
+        /// <summary>
+        /// Load db from file.
+        /// </summary>
+        /// <param name="fn">Where the data lives.</param>
+        /// <returns>Success.</returns>
+        public bool LoadDataStore(string fn)
+        {
+            bool ok = true;
+
+            try
+            {
+                JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
+                string json = File.ReadAllText(fn);
+                var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
+                records.ForEach(r => TrackedFiles.Add(r));
+                //UpdateTags();
+            }
+            catch
+            {
+                // Let's just assume it's a new file.
+                ok = false;
+            }
+
+            _dsfn = fn;
+            _dirty = false;
+
+            return ok;
+        }
+
+        /// <summary>
+        /// Save object to file or original if empty.
+        /// </summary>
+        /// <param name="fn">Where the data lives.</param>
+        public void SaveDataStore(string fn = "")
+        {
+            _dsfn = fn == "" ? _dsfn : fn;
+            JsonSerializerOptions opts = new() { WriteIndented = true };
+            string json = JsonSerializer.Serialize(TrackedFiles, typeof(List<TrackedFile>), opts);
+            File.WriteAllText(_dsfn, json);
+            _dirty = false;
         }
         #endregion
 
@@ -546,11 +776,11 @@ namespace Ephemera.FileFam
             };
 
             // Data.
-            _ds.TrackedFiles.Clear();
+            TrackedFiles.Clear();
             Random rnd = new();
             for (int i = 0; i < 50; i++)
             {
-                _ds.TrackedFiles.Add(new()
+                TrackedFiles.Add(new()
                 {
                     FullName = $"FullName_{rnd.Next(1, 50)}",
                     Id = $"Id_{rnd.Next(1, 50)}",
@@ -559,6 +789,8 @@ namespace Ephemera.FileFam
                     Info = $"{strings[rnd.Next(1, 50) % strings.Count]} {strings[rnd.Next(1, 50) % strings.Count]}",
                 });
             }
+
+            _dirty = true;
         }
         #endregion
     }

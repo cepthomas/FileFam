@@ -1,5 +1,5 @@
 
-# FileFam
+# FileFam TODO2
 
 - collections of associated files.
 - files have arbitrary tags, id (optional), info.
@@ -7,7 +7,7 @@
 - dbl click a file to open it (by association or maybe TODO1 user supplied cmd).
 
 
-// TODO1 Open txt file as ntr? custom aliases and/or pgm associations?
+// TODO2 Open txt file as ntr? custom aliases and/or pgm associations?
 // subl -n -w %1 --command "set_file_type {\"syntax\": \"Packages/JavaScript/JSON.sublime-syntax\"}"
 // When I try this, I see that it sets the syntax of the tab that was active before I executed the command.
 // This tells us, that the command supplied on the command line is executed before the file is loaded, likely because ST does this asynchronously.

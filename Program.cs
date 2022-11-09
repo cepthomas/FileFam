@@ -18,7 +18,7 @@ namespace Ephemera.FileFam
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            var f = new MainForm();
+            var f = new FileFam();
             Application.Run(f);
         }
     }
