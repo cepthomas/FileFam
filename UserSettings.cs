@@ -22,17 +22,10 @@ namespace Ephemera.FileFam
         [Editor(typeof(StringListEditor), typeof(UITypeEditor))]
         public List<string> TrackedFileFilters { get; set; } = new();
 
-        [DisplayName("File Log Level")]
-        [Description("Log level for file write.")]
+        [DisplayName("Target Command")]
+        [Description("What to execute when file selected - %F replaces file name.")]
         [Browsable(true)]
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public LogLevel FileLogLevel { get; set; } = LogLevel.Trace;
-
-        [DisplayName("File Log Level")]
-        [Description("Log level for UI notification.")]
-        [Browsable(true)]
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public LogLevel NotifLogLevel { get; set; } = LogLevel.Debug;
+        public string TargetCommand { get; set; } = "explorer \"%F\"";
         #endregion
 
         #region Persisted Non-editable Persisted Properties

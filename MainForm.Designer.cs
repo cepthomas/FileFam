@@ -24,14 +24,15 @@
             this.tvLog = new Ephemera.NBagOfUis.TextViewer();
             this.menuStrip = new System.Windows.Forms.MenuStrip();
             this.FileMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.NewMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.OpenMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.RecentMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.SaveMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.SaveAsMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolsMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.SettingsMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.AboutMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.DebugMenu = new System.Windows.Forms.ToolStripMenuItem();
-            this.RecentMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip.SuspendLayout();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
@@ -42,23 +43,26 @@
             this.optionsEdit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.optionsEdit.BackColor = System.Drawing.Color.Azure;
             this.optionsEdit.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.optionsEdit.Location = new System.Drawing.Point(853, 31);
+            this.optionsEdit.Location = new System.Drawing.Point(1083, 35);
             this.optionsEdit.Name = "optionsEdit";
-            this.optionsEdit.Size = new System.Drawing.Size(125, 324);
+            this.optionsEdit.Size = new System.Drawing.Size(125, 320);
             this.optionsEdit.TabIndex = 95;
             // 
             // lv
             // 
-            this.lv.Location = new System.Drawing.Point(12, 31);
+            this.lv.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.lv.Location = new System.Drawing.Point(12, 35);
             this.lv.Name = "lv";
-            this.lv.Size = new System.Drawing.Size(825, 569);
+            this.lv.Size = new System.Drawing.Size(1065, 438);
             this.lv.TabIndex = 93;
             this.lv.UseCompatibleStateImageBehavior = false;
             // 
             // txtEdit
             // 
             this.txtEdit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtEdit.Location = new System.Drawing.Point(892, 394);
+            this.txtEdit.Location = new System.Drawing.Point(1083, 361);
             this.txtEdit.Name = "txtEdit";
             this.txtEdit.Size = new System.Drawing.Size(125, 27);
             this.txtEdit.TabIndex = 94;
@@ -69,9 +73,9 @@
             this.statusStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.lblInfo});
-            this.statusStrip.Location = new System.Drawing.Point(0, 616);
+            this.statusStrip.Location = new System.Drawing.Point(0, 613);
             this.statusStrip.Name = "statusStrip";
-            this.statusStrip.Size = new System.Drawing.Size(1210, 26);
+            this.statusStrip.Size = new System.Drawing.Size(1220, 26);
             this.statusStrip.TabIndex = 91;
             this.statusStrip.Text = "statusStrip1";
             // 
@@ -86,11 +90,11 @@
             this.tvLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.tvLog.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.tvLog.Location = new System.Drawing.Point(853, 456);
+            this.tvLog.Location = new System.Drawing.Point(12, 479);
             this.tvLog.MaxText = 5000;
             this.tvLog.Name = "tvLog";
             this.tvLog.Prompt = "> ";
-            this.tvLog.Size = new System.Drawing.Size(346, 144);
+            this.tvLog.Size = new System.Drawing.Size(1065, 131);
             this.tvLog.TabIndex = 92;
             this.tvLog.TabStop = false;
             this.tvLog.WordWrap = true;
@@ -103,13 +107,14 @@
             this.ToolsMenu});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
-            this.menuStrip.Size = new System.Drawing.Size(1210, 28);
+            this.menuStrip.Size = new System.Drawing.Size(1220, 28);
             this.menuStrip.TabIndex = 97;
             this.menuStrip.Text = "menuStrip1";
             // 
             // FileMenu
             // 
             this.FileMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.NewMenu,
             this.OpenMenu,
             this.RecentMenu,
             this.SaveMenu,
@@ -118,11 +123,23 @@
             this.FileMenu.Size = new System.Drawing.Size(46, 24);
             this.FileMenu.Text = "File";
             // 
+            // NewMenu
+            // 
+            this.NewMenu.Name = "NewMenu";
+            this.NewMenu.Size = new System.Drawing.Size(224, 26);
+            this.NewMenu.Text = "New";
+            // 
             // OpenMenu
             // 
             this.OpenMenu.Name = "OpenMenu";
             this.OpenMenu.Size = new System.Drawing.Size(224, 26);
             this.OpenMenu.Text = "Open";
+            // 
+            // RecentMenu
+            // 
+            this.RecentMenu.Name = "RecentMenu";
+            this.RecentMenu.Size = new System.Drawing.Size(224, 26);
+            this.RecentMenu.Text = "Recent";
             // 
             // SaveMenu
             // 
@@ -164,17 +181,11 @@
             this.DebugMenu.Size = new System.Drawing.Size(145, 26);
             this.DebugMenu.Text = "Fake";
             // 
-            // RecentMenu
-            // 
-            this.RecentMenu.Name = "RecentMenu";
-            this.RecentMenu.Size = new System.Drawing.Size(224, 26);
-            this.RecentMenu.Text = "Recent";
-            // 
             // FileFam
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1210, 642);
+            this.ClientSize = new System.Drawing.Size(1220, 639);
             this.Controls.Add(this.optionsEdit);
             this.Controls.Add(this.txtEdit);
             this.Controls.Add(this.lv);
@@ -228,5 +239,6 @@
         private System.Windows.Forms.ToolStripMenuItem SaveMenu;
         private System.Windows.Forms.ToolStripMenuItem SaveAsMenu;
         private System.Windows.Forms.ToolStripMenuItem RecentMenu;
+        private System.Windows.Forms.ToolStripMenuItem NewMenu;
     }
 }

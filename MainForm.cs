@@ -9,10 +9,10 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
-using Ephemera.NBagOfTricks;
-using Ephemera.NBagOfTricks.Slog;
-using Ephemera.NBagOfUis;
 using System.Text.Json;
+using Ephemera.NBagOfTricks;
+// using Ephemera.NBagOfTricks.Slog;
+using Ephemera.NBagOfUis;
 
 
 //Lambda Expression: Var Val = value. Where (Val<=5);
@@ -37,20 +37,14 @@ namespace Ephemera.FileFam
     public partial class FileFam : Form
     {
         #region Fields
-        /// <summary>My logger.</summary>
-        readonly Logger _logger = LogManager.CreateLogger("FileFam");
-
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
-        // /// <summary>Where the data lives.</summary>
-        // DataStore _ds = new();
+        /// <summary>The ff config records.</summary>
+        readonly List<TrackedFile> _trackedFiles = new();
 
-        /// <summary>The datastore records.</summary>
-        readonly List<TrackedFile> TrackedFiles = new();
-
-        /// <summary>The datastore filename.</summary>
-        string _dsfn = "";
+        /// <summary>The ff config filename.</summary>
+        string _fffn = "";
 
         /// <summary>Prevent resize recursion.</summary>
         bool _resizing = false;
@@ -93,14 +87,7 @@ namespace Ephemera.FileFam
 
             InitializeComponent();
 
-            // Init logging.
-            LogManager.MinLevelFile = _settings.FileLogLevel;
-            LogManager.MinLevelNotif = _settings.NotifLogLevel;
-            LogManager.LogMessage += (object? sender, LogMessageEventArgs e) => { this.InvokeIfRequired(_ => { tvLog.AppendLine($"{e.Message}"); }); };
-            LogManager.Run(Path.Join(appDir, "log.txt"), 100000);
-
             // Log display.
-            tvLog.Font = Font;
             tvLog.MatchColors.Add("ERR", Color.LightPink);
             tvLog.MatchColors.Add("WRN", Color.Plum);
 
@@ -110,9 +97,12 @@ namespace Ephemera.FileFam
             Location = new(_settings.FormGeometry.X, _settings.FormGeometry.Y);
             Size = new(_settings.FormGeometry.Width, _settings.FormGeometry.Height);
 
-            // The DataStore.
-            var dsfn = Path.Combine(appDir, "filefam_test.ff");//TODO1 get from MRU + settings for open-last
-            OpenFile(dsfn);
+            // The ff config.
+            if (_settings.RecentFiles.Count > 0)
+            {
+                OpenFile(_settings.RecentFiles[0]);
+
+            }
             optionsEdit.OptionsChanged += OptionsEdit_OptionsChanged;
 
             // Listview.
@@ -132,7 +122,6 @@ namespace Ephemera.FileFam
             lv.ContextMenuStrip = new();
             lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, Lv_Add));
             lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Delete", null, Lv_Delete));
-
             // All interesting events.
             lv.Click += Lv_Click;
             lv.DoubleClick += Lv_DoubleClick;
@@ -146,10 +135,11 @@ namespace Ephemera.FileFam
             txtEdit.KeyDown += TxtEdit_KeyDown;
 
             // File menu.
-            FileMenu.DropDownOpening += FileMenu_DropDownOpening;
+            NewMenu.Click += NewMenu_Click;
             OpenMenu.Click += OpenMenu_Click;
             SaveMenu.Click += SaveMenu_Click;
             SaveAsMenu.Click += SaveAsMenu_Click;
+            FileMenu.DropDownOpening += FileMenu_DropDownOpening;
 
             // Tools.
             SettingsMenu.Click += (_, __) => EditSettings();
@@ -167,6 +157,7 @@ namespace Ephemera.FileFam
         {
             ShowRecords(0);
             ResizeLv();
+            UpdateUi();
 
             base.OnLoad(e);
         }
@@ -177,17 +168,15 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            SaveDataStore();
+            SaveFile("");
             SaveSettings();
-            _logger.Info("Shutting down");
-            LogManager.Stop();
             base.OnFormClosing(e);
         }
         #endregion
 
-        #region UI menu handlers
+        #region File menu handlers
         /// <summary>
-        /// Show the recent ff files in the menu.
+        /// Show the recent ff config files in the menu.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -209,7 +198,7 @@ namespace Ephemera.FileFam
         }
 
         /// <summary>
-        /// Allows the user to select datastore file.
+        /// Allows the user to select ff config file from system.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -227,10 +216,11 @@ namespace Ephemera.FileFam
                 var fn = openDlg.FileName;
                 OpenFile(fn);
             }
+            UpdateUi();
         }
 
         /// <summary>
-        /// Save as a new file.
+        /// Save current ff config as a new file.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -244,34 +234,43 @@ namespace Ephemera.FileFam
 
             if (saveDlg.ShowDialog() == DialogResult.OK)
             {
+                _fffn = saveDlg.FileName;
                 SaveFile(saveDlg.FileName);
             }
+            UpdateUi();
         }
 
         /// <summary>
-        /// Save current file.
+        /// Save current ff config file.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         void SaveMenu_Click(object? sender, EventArgs e)
         {
-            SaveFile(_dsfn);
+            SaveFile("");
+            UpdateUi();
         }
 
         /// <summary>
-        /// 
+        /// Create a new ff config.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        /// <exception cref="NotImplementedException"></exception>
-        void CloseMenu_Click(object? sender, EventArgs e)
+        void NewMenu_Click(object? sender, EventArgs e)
         {
-            // Check for dirty etc
-            throw new NotImplementedException();
+            // Check for current file dirty.
+            CheckCurrentFile();
+
+            _trackedFiles.Clear();
+            _fffn = "";
+            _dirty = true;
+
+            ShowMessage($"Created new ff for you");
+            UpdateUi();
         }
         #endregion
 
-        #region Datastore file I/O
+        #region ff config file I/O
         /// <summary>
         /// Common file opener.
         /// </summary>
@@ -283,55 +282,52 @@ namespace Ephemera.FileFam
 
             try
             {
-                // TODO1 Check for current file dirty.
+                // Check for current file dirty.
+                CheckCurrentFile();
 
                 // Do validity checks.
-                if (!File.Exists(fn))
-                {
-                    throw new InvalidOperationException($"Invalid file.");
-                }
-
                 var ext = Path.GetExtension(fn).ToLower();
                 var baseFn = Path.GetFileName(fn);
 
                 // Valid file name.
-                _logger.Info($"Opening file: {fn}");
+                ShowMessage($"Opening file: {fn}");
 
-                if (!LoadDataStore(fn))
-                {
-                    _logger.Warn("Couldn't open db file so I made a new one for you");
-                }
+                JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
+                string json = File.ReadAllText(fn);
+                var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
+                records.ForEach(r => _trackedFiles.Add(r));
 
-                // The tags. Get all in ds ordered by frequency.
+                _fffn = fn;
+                _dirty = false;
+
+                // Get all tags in ff ordered by frequency.
                 Dictionary<string, bool> allTags = new();
-                Dictionary<string, int> dsTags = new();
-                TrackedFiles
+                Dictionary<string, int> ffTags = new();
+                _trackedFiles
                     .ForEach(f => f.Tags.SplitByToken(" ")
                     .ForEach(t =>
                     {
-                        if (!dsTags.ContainsKey(t))
+                        if (!ffTags.ContainsKey(t))
                         {
-                            dsTags.Add(t, 0);
+                            ffTags.Add(t, 0);
                         }
-                        dsTags[t]++;
+                        ffTags[t]++;
                     }
                 ));
 
-                dsTags
+                ffTags
                     .OrderByDescending(t => t.Value)
                     .ForEach(t => allTags.Add(t.Key, false));
 
                 optionsEdit.Options = allTags;
 
-                if (ok)
-                {
-                    _dirty = false;
-                    _settings.UpdateMru(fn);
-                }
+                _fffn = fn;
+                _settings.UpdateMru(fn);
+                _dirty = false;
             }
             catch (Exception ex)
             {
-                _logger.Error($"Couldn't open the file: {fn} because: {ex.Message}");
+                ShowMessage($"ERR Couldn't open the file: {fn} because: {ex.Message}");
                 ok = false;
             }
 
@@ -343,15 +339,28 @@ namespace Ephemera.FileFam
         /// <summary>
         /// Save the file.
         /// </summary>
-        /// <param name="fn">The file to save to.</param>
+        /// <param name="fn">The file to save to. If empty assume the current file.</param>
         /// <returns>Status.</returns>
         bool SaveFile(string fn)
         {
             bool ok = false;
+            var newfn = fn == "" ? _fffn : fn;
 
-            SaveDataStore();
+            try
+            {
+                JsonSerializerOptions opts = new() { WriteIndented = true };
+                string json = JsonSerializer.Serialize(_trackedFiles, typeof(List<TrackedFile>), opts);
+                File.WriteAllText(newfn, json);
+                // Ok, update status.
+                _fffn = newfn;
+                _dirty = false;
 
-            _dirty = false;
+            }
+            catch (Exception ex)
+            {
+                ShowMessage($"ERR Couldn't save the file: {newfn} because: {ex.Message}");
+                ok = false;
+            }
 
             UpdateUi();
 
@@ -370,7 +379,40 @@ namespace Ephemera.FileFam
             AboutMenu.Enabled = true;
             SettingsMenu.Enabled = true;
 
-            Text = $"FileFam {MiscUtils.GetVersionString()} {_dsfn}";
+            Text = $"FileFam {MiscUtils.GetVersionString()} {_fffn}";
+        }
+
+        /// <summary>
+        /// If current ff is dirty ask the user what to do.
+        /// </summary>
+        /// <returns>True means handled.</returns>
+        bool CheckCurrentFile()
+        {
+            bool ok = true;
+
+            if (_dirty)
+            {
+                var newfn = _fffn == "" ? "New file" : _fffn;
+
+                var res = MessageBox.Show($"{newfn} has unsaved changes. Do you want to save it?", "Close File", MessageBoxButtons.YesNoCancel);
+
+                switch (res)
+                {
+                    case DialogResult.Yes:
+                        SaveAsMenu_Click(null, EventArgs.Empty);
+                        break;
+
+                    case DialogResult.No:
+                        // Don't save file.
+                        break;
+
+                    case DialogResult.Cancel:
+                        ok = false;
+                        break;
+                }
+            }
+
+            return ok;
         }
         #endregion
 
@@ -393,7 +435,7 @@ namespace Ephemera.FileFam
         void Lv_Add(object? sender, EventArgs e)
         {
             var rec = new TrackedFile();
-            TrackedFiles.Add(rec);
+            _trackedFiles.Add(rec);
             _dirty = true;
             ShowRecords(rec.UID);
         }
@@ -418,7 +460,7 @@ namespace Ephemera.FileFam
 
                 // Process selection.
                 var rec = lv.SelectedItems[0].Tag as TrackedFile;
-                TrackedFiles.Remove(rec!);
+                _trackedFiles.Remove(rec!);
                 _dirty = true;
 
                 ShowRecords(nextuid);
@@ -476,19 +518,21 @@ namespace Ephemera.FileFam
                 // var baseFn = Path.GetFileName(fn);
 
                 // Valid file name.
-                _logger.Info($"Opening file: {fn}");
+                var cmd = _settings.TargetCommand.Replace("%F", fn);
+                ShowMessage($"Executing target command: {cmd}");
 
-                Process.Start("explorer", "\"" + fn + "\"");//TODO1 in settings
+                var info = new ProcessStartInfo(cmd) { UseShellExecute = true };
+                var proc = new Process() { StartInfo = info };
+                proc.Start();
 
                 tf.LastAccess = DateTime.Now;
-                _settings.UpdateMru(fn);
-
+                _dirty = true;
 
                 ShowRecords(tf.UID);
             }
             else
             {
-                _logger.Warn($"Invalid file: {fn}");
+                ShowMessage($"WRN Invalid file: {fn}");
             }
         }
 
@@ -584,7 +628,7 @@ namespace Ephemera.FileFam
 
         #region Internal functions
         /// <summary>
-        /// Sort and filter then update the listview. This is a client responsibility.
+        /// Sort and filter then update the listview.
         /// </summary>
         /// <param name="seluid">Put the focus on this record.</param>
         void ShowRecords(int seluid)
@@ -598,8 +642,8 @@ namespace Ephemera.FileFam
                 .ForEach(o => filterTags.Add(o.Key));
 
             var qry = filterTags.Count > 0 ?
-                TrackedFiles.Where(rec => rec.Tags.SplitByToken(" ").Intersect(filterTags).Any()) :
-                TrackedFiles;
+                _trackedFiles.Where(rec => rec.Tags.SplitByToken(" ").Intersect(filterTags).Any()) :
+                _trackedFiles;
 
             // Sort by column and direction.
             var sorted = _selColumn switch
@@ -655,49 +699,14 @@ namespace Ephemera.FileFam
                 _resizing = false;
             }
         }
-        #endregion
-
-        #region Datastore persistence
-        /// <summary>
-        /// Load db from file.
-        /// </summary>
-        /// <param name="fn">Where the data lives.</param>
-        /// <returns>Success.</returns>
-        public bool LoadDataStore(string fn)
-        {
-            bool ok = true;
-
-            try
-            {
-                JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
-                string json = File.ReadAllText(fn);
-                var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
-                records.ForEach(r => TrackedFiles.Add(r));
-                //UpdateTags();
-            }
-            catch
-            {
-                // Let's just assume it's a new file.
-                ok = false;
-            }
-
-            _dsfn = fn;
-            _dirty = false;
-
-            return ok;
-        }
 
         /// <summary>
-        /// Save object to file or original if empty.
+        /// Tell the user something.
         /// </summary>
-        /// <param name="fn">Where the data lives.</param>
-        public void SaveDataStore(string fn = "")
+        /// <param name="msg"></param>
+        void ShowMessage(string msg)
         {
-            _dsfn = fn == "" ? _dsfn : fn;
-            JsonSerializerOptions opts = new() { WriteIndented = true };
-            string json = JsonSerializer.Serialize(TrackedFiles, typeof(List<TrackedFile>), opts);
-            File.WriteAllText(_dsfn, json);
-            _dirty = false;
+            tvLog.AppendLine($"> {msg}");
         }
         #endregion
 
@@ -707,26 +716,9 @@ namespace Ephemera.FileFam
         /// </summary>
         void EditSettings()
         {
-            var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
+            var changes = SettingsEditor.Edit(_settings, "User Settings", 400);
 
-            //// Detect changes of interest. Lists are ref bound so already updated.
-            bool restart = false;
-
-            foreach (var (name, cat) in changes)
-            {
-                switch (name)
-                {
-                    case "FileLogLevel":
-                    case "NotifLogLevel":
-                        restart = true;
-                        break;
-                }
-            }
-
-            if (restart)
-            {
-                MessageBox.Show("Restart required for changes to take effect");
-            }
+            // Detect changes of interest. Lists are ref bound so already updated.
 
             SaveSettings();
         }
@@ -776,11 +768,11 @@ namespace Ephemera.FileFam
             };
 
             // Data.
-            TrackedFiles.Clear();
+            _trackedFiles.Clear();
             Random rnd = new();
             for (int i = 0; i < 50; i++)
             {
-                TrackedFiles.Add(new()
+                _trackedFiles.Add(new()
                 {
                     FullName = $"FullName_{rnd.Next(1, 50)}",
                     Id = $"Id_{rnd.Next(1, 50)}",
