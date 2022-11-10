@@ -40,12 +40,13 @@
             // optionsEdit
             // 
             this.optionsEdit.AllowEdit = true;
-            this.optionsEdit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.optionsEdit.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.optionsEdit.BackColor = System.Drawing.Color.Azure;
             this.optionsEdit.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.optionsEdit.Location = new System.Drawing.Point(1083, 35);
             this.optionsEdit.Name = "optionsEdit";
-            this.optionsEdit.Size = new System.Drawing.Size(125, 320);
+            this.optionsEdit.Size = new System.Drawing.Size(125, 438);
             this.optionsEdit.TabIndex = 95;
             // 
             // lv
@@ -62,7 +63,7 @@
             // txtEdit
             // 
             this.txtEdit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtEdit.Location = new System.Drawing.Point(1083, 361);
+            this.txtEdit.Location = new System.Drawing.Point(1083, 536);
             this.txtEdit.Name = "txtEdit";
             this.txtEdit.Size = new System.Drawing.Size(125, 27);
             this.txtEdit.TabIndex = 94;
@@ -126,31 +127,31 @@
             // NewMenu
             // 
             this.NewMenu.Name = "NewMenu";
-            this.NewMenu.Size = new System.Drawing.Size(224, 26);
+            this.NewMenu.Size = new System.Drawing.Size(141, 26);
             this.NewMenu.Text = "New";
             // 
             // OpenMenu
             // 
             this.OpenMenu.Name = "OpenMenu";
-            this.OpenMenu.Size = new System.Drawing.Size(224, 26);
+            this.OpenMenu.Size = new System.Drawing.Size(141, 26);
             this.OpenMenu.Text = "Open";
             // 
             // RecentMenu
             // 
             this.RecentMenu.Name = "RecentMenu";
-            this.RecentMenu.Size = new System.Drawing.Size(224, 26);
+            this.RecentMenu.Size = new System.Drawing.Size(141, 26);
             this.RecentMenu.Text = "Recent";
             // 
             // SaveMenu
             // 
             this.SaveMenu.Name = "SaveMenu";
-            this.SaveMenu.Size = new System.Drawing.Size(224, 26);
+            this.SaveMenu.Size = new System.Drawing.Size(141, 26);
             this.SaveMenu.Text = "Save";
             // 
             // SaveAsMenu
             // 
             this.SaveAsMenu.Name = "SaveAsMenu";
-            this.SaveAsMenu.Size = new System.Drawing.Size(224, 26);
+            this.SaveAsMenu.Size = new System.Drawing.Size(141, 26);
             this.SaveAsMenu.Text = "Save as";
             // 
             // ToolsMenu

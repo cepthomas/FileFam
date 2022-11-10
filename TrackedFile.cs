@@ -14,8 +14,6 @@ namespace Ephemera.FileFam
         #region Fields
         /// <summary>Unique id incremented.</summary>
         static int _uids = 0;
-        #endregion
-
 
         // #region API convenience - must match Record
         // public const int FullNameOrdinal = 0;
@@ -24,7 +22,7 @@ namespace Ephemera.FileFam
         // public const int TagsOrdinal = 3;
         // public const int InfoOrdinal = 4;
         // #endregion
-
+        #endregion
 
         #region Properties
         /// <summary>The full path to the file.</summary>
@@ -43,6 +41,7 @@ namespace Ephemera.FileFam
         public string Info { get; set; } = "";
 
         /// <summary>Unique id for internal use.</summary>
+        [JsonIgnore]
         public int UID { get; private set; } = -1;
         #endregion
 
@@ -55,12 +54,15 @@ namespace Ephemera.FileFam
         }
 
         /// <summary>Suitable for adding to listview subitems. In ordinal order.</summary>
+        [JsonIgnore]
         public object[] Values { get { return new object[] { FullName, Id, LastAccess, Tags, Info }; } }
 
         /// <summary>Suitable for adding to listview subitems. In ordinal order.</summary>
+        [JsonIgnore]
         public static string[] ColumnNames { get { return new string[] {"FullName", "Id", "LastAccess", "Tags", "Info" }; } }
 
-        /// <summary>Suitable for adding to listview columns. In ordinal order. TODO1 or just use Values?</summary>
+        /// <summary>Suitable for adding to listview columns. In ordinal order.</summary>
+        [JsonIgnore]
         public string[] ValueStrings { get { return new string[] { FullName.ToString(), Id, LastAccess.ToString(), Tags, Info }; } }
 
         /// <summary>

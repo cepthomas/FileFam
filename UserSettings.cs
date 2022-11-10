@@ -15,7 +15,7 @@ namespace Ephemera.FileFam
     public sealed class UserSettings : SettingsCore
     {
         #region Persisted Editable Properties
-        [DisplayName("Filters")]
+        [DisplayName("Tracked File Types")]
         [Description("Select only these file types.")]
         [Category("Files")]
         [Browsable(true)]
@@ -23,7 +23,7 @@ namespace Ephemera.FileFam
         public List<string> TrackedFileFilters { get; set; } = new();
 
         [DisplayName("Target Command")]
-        [Description("What to execute when file selected - %F replaces file name.")]
+        [Description("What to execute when file selected - %F is replaced with file name.")]
         [Browsable(true)]
         public string TargetCommand { get; set; } = "explorer \"%F\"";
         #endregion

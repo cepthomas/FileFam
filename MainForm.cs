@@ -97,11 +97,10 @@ namespace Ephemera.FileFam
             Location = new(_settings.FormGeometry.X, _settings.FormGeometry.Y);
             Size = new(_settings.FormGeometry.Width, _settings.FormGeometry.Height);
 
-            // The ff config.
+            // The ff file.
             if (_settings.RecentFiles.Count > 0)
             {
                 OpenFile(_settings.RecentFiles[0]);
-
             }
             optionsEdit.OptionsChanged += OptionsEdit_OptionsChanged;
 
@@ -299,6 +298,7 @@ namespace Ephemera.FileFam
 
                 _fffn = fn;
                 _dirty = false;
+                _settings.UpdateMru(fn);
 
                 // Get all tags in ff ordered by frequency.
                 Dictionary<string, bool> allTags = new();
@@ -321,9 +321,7 @@ namespace Ephemera.FileFam
 
                 optionsEdit.Options = allTags;
 
-                _fffn = fn;
-                _settings.UpdateMru(fn);
-                _dirty = false;
+                ShowRecords(-1);
             }
             catch (Exception ex)
             {
@@ -492,7 +490,7 @@ namespace Ephemera.FileFam
                 colhdr.Text = colhdr.Name;
             }
 
-            var seluid = (lv.SelectedItems[0].Tag as TrackedFile)!.UID;
+            var seluid = lv.SelectedItems.Count > 0 ? (lv.SelectedItems[0].Tag as TrackedFile)!.UID : -1;
 
             ShowRecords(seluid);
 
@@ -551,7 +549,7 @@ namespace Ephemera.FileFam
                 var subItem = hitTestInfo.SubItem;
                 _selColumn = hitTestInfo.Item.SubItems.IndexOf(subItem);
 
-                // Show the text to edit.
+                // Show the text to edit. TODO1 if it's filename also supply picker.
                 string lastContent = record!.StringAt(_selColumn);
 
                 if (lastContent.Length > 35)
@@ -630,7 +628,7 @@ namespace Ephemera.FileFam
         /// <summary>
         /// Sort and filter then update the listview.
         /// </summary>
-        /// <param name="seluid">Put the focus on this record.</param>
+        /// <param name="seluid">Put the focus on this record. -1 sort of means ignore.</param>
         void ShowRecords(int seluid)
         {
             //IEnumerable<TrackedFile> sorted;
@@ -642,7 +640,11 @@ namespace Ephemera.FileFam
                 .ForEach(o => filterTags.Add(o.Key));
 
             var qry = filterTags.Count > 0 ?
-                _trackedFiles.Where(rec => rec.Tags.SplitByToken(" ").Intersect(filterTags).Any()) :
+                _trackedFiles
+                .Where(rec => rec.Tags.SplitByToken(" ")
+                .Intersect(filterTags)
+                .Any())
+                :
                 _trackedFiles;
 
             // Sort by column and direction.
@@ -706,7 +708,7 @@ namespace Ephemera.FileFam
         /// <param name="msg"></param>
         void ShowMessage(string msg)
         {
-            tvLog.AppendLine($"> {msg}");
+            tvLog.AppendLine($"{msg}");
         }
         #endregion
 
@@ -717,9 +719,7 @@ namespace Ephemera.FileFam
         void EditSettings()
         {
             var changes = SettingsEditor.Edit(_settings, "User Settings", 400);
-
             // Detect changes of interest. Lists are ref bound so already updated.
-
             SaveSettings();
         }
 
@@ -768,13 +768,13 @@ namespace Ephemera.FileFam
             };
 
             // Data.
-            _trackedFiles.Clear();
+            var trackedFiles = new List<TrackedFile>();
             Random rnd = new();
             for (int i = 0; i < 50; i++)
             {
-                _trackedFiles.Add(new()
+                trackedFiles.Add(new()
                 {
-                    FullName = $"FullName_{rnd.Next(1, 50)}",
+                    FullName = $"FullName_{rnd.Next(1, 50)}.txt",
                     Id = $"Id_{rnd.Next(1, 50)}",
                     LastAccess = DateTime.Now + new TimeSpan(rnd.Next(1, 1300), rnd.Next(1, 20), rnd.Next(1, 50), rnd.Next(1, 50)),
                     Tags = $"T{rnd.Next(1, 9)} T{rnd.Next(1, 9)} T{rnd.Next(1, 9)}",
@@ -782,7 +782,9 @@ namespace Ephemera.FileFam
                 });
             }
 
-            _dirty = true;
+            JsonSerializerOptions opts = new() { WriteIndented = true };
+            string json = JsonSerializer.Serialize(trackedFiles, typeof(List<TrackedFile>), opts);
+            Clipboard.SetText(json);
         }
         #endregion
     }
