@@ -16,16 +16,10 @@ namespace Ephemera.FileFam
     {
         #region Persisted Editable Properties
         [DisplayName("Tracked File Types")]
-        [Description("Select only these file types.")]
-        [Category("Files")]
+        [Description("All the supported file types.")]
         [Browsable(true)]
-        [Editor(typeof(StringListEditor), typeof(UITypeEditor))]
-        public List<string> TrackedFileFilters { get; set; } = new();
-
-        [DisplayName("Target Command")]
-        [Description("What to execute when file selected - %F is replaced with file name.")]
-        [Browsable(true)]
-        public string TargetCommand { get; set; } = "explorer \"%F\"";
+       // [TypeConverter(typeof(ExpandableObjectConverter))]
+        public List<FileCategory> TrackedFileTypes { get; set; } = new();
         #endregion
 
         #region Persisted Non-editable Persisted Properties
@@ -34,6 +28,28 @@ namespace Ephemera.FileFam
 
         [Browsable(false)]
         public List<string> CurrentTags { get; set; } = new();
+        #endregion
+    }
+
+    [Serializable]
+    public sealed class FileCategory
+    {
+        #region Persisted Editable Properties
+        [DisplayName("Category Name")]
+        [Description("What appears in the file selector.")]
+        [Browsable(true)]
+        public string CategoryName { get; set; } = "???";
+
+        [DisplayName("Extensions")]
+        [Description("Select only these file types.")]
+        [Browsable(true)]
+        [Editor(typeof(StringListEditor), typeof(UITypeEditor))]
+        public List<string> Extensions { get; set; } = new();
+
+        [DisplayName("Target Command")]
+        [Description("What to execute when file selected - %F is replaced with file name.")]
+        [Browsable(true)]
+        public string TargetCommand { get; set; } = "%F";
         #endregion
     }
 }

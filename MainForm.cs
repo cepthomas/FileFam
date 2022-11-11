@@ -11,25 +11,7 @@ using System.Globalization;
 using System.Threading;
 using System.Text.Json;
 using Ephemera.NBagOfTricks;
-// using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
-
-
-//Lambda Expression: Var Val = value. Where (Val<=5);
-//Query Syntax: Var Val = from val in Value Where val> 10;
-//
-// var query =
-//    from c in db.Customers
-//    where c.Name.StartsWith ("A") || c.Name.StartsWith ("B")
-//    orderby c.Name
-//    select c.Name.ToUpper();
-// var thirdPage = query.Skip(20).Take(10);
-// You might have noticed another more subtle (but important) benefit of the LINQ approach. We chose to compose
-// the query in two steps—and this allows us to generalize the second step into a reusable method as follows:
-// IQueryable<T> Paginate<T> (this IQueryable<T> query, int skip, int take)
-// {
-//    return query.Skip(skip).Take(take);
-// }
 
 
 namespace Ephemera.FileFam
@@ -121,6 +103,7 @@ namespace Ephemera.FileFam
             lv.ContextMenuStrip = new();
             lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, Lv_Add));
             lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Delete", null, Lv_Delete));
+            lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Pick a File", null, Lv_PickFile));
             // All interesting events.
             lv.Click += Lv_Click;
             lv.DoubleClick += Lv_DoubleClick;
@@ -294,31 +277,23 @@ namespace Ephemera.FileFam
                 JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
                 string json = File.ReadAllText(fn);
                 var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
-                records.ForEach(r => _trackedFiles.Add(r));
+                _trackedFiles.AddRange(records);
 
                 _fffn = fn;
                 _dirty = false;
                 _settings.UpdateMru(fn);
 
                 // Get all tags in ff ordered by frequency.
-                Dictionary<string, bool> allTags = new();
                 Dictionary<string, int> ffTags = new();
                 _trackedFiles
                     .ForEach(f => f.Tags.SplitByToken(" ")
-                    .ForEach(t =>
-                    {
-                        if (!ffTags.ContainsKey(t))
-                        {
-                            ffTags.Add(t, 0);
-                        }
-                        ffTags[t]++;
-                    }
-                ));
+                    .ForEach(t => ffTags[t] = ffTags.ContainsKey(t) ? ffTags[t] + 1 : 1));
 
+                List<string> allTagNames = new(ffTags.Keys);
+                Dictionary<string, bool> allTags = new();
                 ffTags
                     .OrderByDescending(t => t.Value)
-                    .ForEach(t => allTags.Add(t.Key, false));
-
+                    .ForEach(t => allTags.Add(t.Key, _settings.CurrentTags.Contains(t.Key)));
                 optionsEdit.Options = allTags;
 
                 ShowRecords(-1);
@@ -435,6 +410,7 @@ namespace Ephemera.FileFam
             var rec = new TrackedFile();
             _trackedFiles.Add(rec);
             _dirty = true;
+
             ShowRecords(rec.UID);
         }
 
@@ -448,7 +424,7 @@ namespace Ephemera.FileFam
             if (lv.SelectedIndices.Count > 0)
             {
                 // Get the next item.
-                int nextuid = -1;
+                int nextuid = -1; // default
                 int row = lv.SelectedIndices[0];
                 if (lv.Items.Count > row + 1)
                 {
@@ -462,6 +438,53 @@ namespace Ephemera.FileFam
                 _dirty = true;
 
                 ShowRecords(nextuid);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void Lv_PickFile(object? sender, EventArgs e)
+        {
+            // Collect filters.
+            List<string> filters = new();
+
+            // "Midi,sty,pcs,sst,prs" "Style,sty,prs"  >>> "Midi Files|*.sty;*.pcs;*.sst;*.prs|Style Files|*.sty;*.prs"
+
+            try
+            {
+                _settings.TrackedFileTypes.ForEach(t =>
+                {
+                    filters.Add($"{t.CategoryName} Files");
+                    string exts = string.Join(";*.", t.Extensions).Remove(0, 1);
+                    filters.Add(exts);
+                }
+                );
+
+                filters.Add("All Files");
+                filters.Add("*.*");
+                var fs = string.Join("|", filters);
+
+                using OpenFileDialog openDlg = new()
+                {
+                    Filter = fs,
+                    Title = "Pick a file"
+                };
+
+                if (openDlg.ShowDialog() == DialogResult.OK)
+                {
+                    // Save selection.
+                    var rec = lv.SelectedItems[0].Tag as TrackedFile;
+                    rec!.FullName = openDlg.FileName;
+
+                    ShowRecords(rec.UID);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowMessage($"ERR Bad filter: {ex.Message}");
             }
         }
 
@@ -508,29 +531,37 @@ namespace Ephemera.FileFam
             var tf = lv.SelectedItems[0].Tag as TrackedFile;
             var fn = tf!.FullName;
 
-            bool ok = File.Exists(fn);
-
-            if (ok)
+            try
             {
-                // var ext = Path.GetExtension(fn).ToLower();
-                // var baseFn = Path.GetFileName(fn);
+                if (!File.Exists(fn))
+                {
+                    throw new Exception($"Invalid file {fn}");
+                }
 
-                // Valid file name.
-                var cmd = _settings.TargetCommand.Replace("%F", fn);
+                // Dig out the file type particulars.
+                var ext = Path.GetExtension(tf!.FullName).Replace(".", "");
+                FileCategory? fc = _settings.TrackedFileTypes.FirstOrDefault(fc => fc.Extensions.Contains(ext));
+
+                if (fc is null)
+                {
+                    throw new Exception($"Extension {ext} not found");
+                }
+
+                var cmd = fc.TargetCommand.Replace("%F", fn);
                 ShowMessage($"Executing target command: {cmd}");
-
                 var info = new ProcessStartInfo(cmd) { UseShellExecute = true };
                 var proc = new Process() { StartInfo = info };
                 proc.Start();
 
+                // Update record.
                 tf.LastAccess = DateTime.Now;
                 _dirty = true;
 
                 ShowRecords(tf.UID);
             }
-            else
+            catch (Exception ex)
             {
-                ShowMessage($"WRN Invalid file: {fn}");
+                ShowMessage($"ERR Something went wrong with your Tracked File Types: {ex.Message}");
             }
         }
 
@@ -545,12 +576,12 @@ namespace Ephemera.FileFam
             {
                 var pt = PointToClient(MousePosition);
                 var hitTestInfo = lv.HitTest(pt);
-                var record = hitTestInfo.Item.Tag as TrackedFile;
+                var rec = hitTestInfo.Item.Tag as TrackedFile;
                 var subItem = hitTestInfo.SubItem;
                 _selColumn = hitTestInfo.Item.SubItems.IndexOf(subItem);
 
-                // Show the text to edit. TODO1 if it's filename also supply picker.
-                string lastContent = record!.StringAt(_selColumn);
+                // Show the text to edit.
+                string lastContent = rec!.StringAt(_selColumn);
 
                 if (lastContent.Length > 35)
                 {
@@ -628,7 +659,7 @@ namespace Ephemera.FileFam
         /// <summary>
         /// Sort and filter then update the listview.
         /// </summary>
-        /// <param name="seluid">Put the focus on this record. -1 sort of means ignore.</param>
+        /// <param name="seluid">Put the focus on this record after showing. -1 sort of means ignore.</param>
         void ShowRecords(int seluid)
         {
             //IEnumerable<TrackedFile> sorted;
@@ -647,6 +678,8 @@ namespace Ephemera.FileFam
                 :
                 _trackedFiles;
 
+            // TODO also filter by other columns.
+
             // Sort by column and direction.
             var sorted = _selColumn switch
             {
@@ -657,7 +690,6 @@ namespace Ephemera.FileFam
                 4 => qry.OrderBy(r => r.Info),
                 _ => qry // no sort - use raw
             };
-
             var sortedOrdered = _sortOrder == SortOrder.Descending ? sorted.Reverse() : sorted;
 
             // Show the data.
@@ -670,7 +702,7 @@ namespace Ephemera.FileFam
             }
             lv.ResumeLayout();
 
-            // Select the requested record. TODO2 optimize?
+            // Select the requested record. TODO optimize?
             for (int i = 0; i < lv.Items.Count; i++)
             {
                 if ((lv.Items[i].Tag as TrackedFile)!.UID == seluid)
@@ -688,7 +720,7 @@ namespace Ephemera.FileFam
         /// </summary>
         void ResizeLv()
         {
-            if (!_resizing) // TODO2 improve?
+            if (!_resizing) // TODO optimize?
             {
                 _resizing = true;
 
@@ -718,7 +750,7 @@ namespace Ephemera.FileFam
         /// </summary>
         void EditSettings()
         {
-            var changes = SettingsEditor.Edit(_settings, "User Settings", 400);
+            SettingsEditor.Edit(_settings, "User Settings", 400);
             // Detect changes of interest. Lists are ref bound so already updated.
             SaveSettings();
         }
