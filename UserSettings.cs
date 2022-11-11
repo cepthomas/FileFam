@@ -18,7 +18,6 @@ namespace Ephemera.FileFam
         [DisplayName("Tracked File Types")]
         [Description("All the supported file types.")]
         [Browsable(true)]
-       // [TypeConverter(typeof(ExpandableObjectConverter))]
         public List<FileCategory> TrackedFileTypes { get; set; } = new();
         #endregion
 
