@@ -4,8 +4,11 @@
         <name>Ephemera.NBagOfUis</name>
     </assembly>
     <members>
-        <member name="P:Ephemera.NBagOfUis.ChoiceSelector.SelectedOption">
+        <member name="P:Ephemera.NBagOfUis.ChoiceSelector.SelectedChoice">
             <summary>What the user picked.</summary>
+        </member>
+        <member name="E:Ephemera.NBagOfUis.ChoiceSelector.ChoiceChanged">
+            <summary>Value changed event.</summary>
         </member>
         <member name="M:Ephemera.NBagOfUis.ChoiceSelector.#ctor">
             <summary>
@@ -558,7 +561,7 @@
             <summary>If true, user can add and delete values, otherwise just select.</summary>
         </member>
         <member name="E:Ephemera.NBagOfUis.OptionsEditor.OptionsChanged">
-            <summary>ClickGrid value changed event.</summary>
+            <summary>Value changed event.</summary>
         </member>
         <member name="M:Ephemera.NBagOfUis.OptionsEditor.#ctor">
             <summary>

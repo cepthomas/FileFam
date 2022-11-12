@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Text.Json.Serialization;
+using Ephemera.NBagOfTricks;
 
 
 namespace Ephemera.FileFam
@@ -14,14 +16,14 @@ namespace Ephemera.FileFam
         #region Fields
         /// <summary>Unique id incremented.</summary>
         static int _uids = 0;
+        #endregion
 
-        // #region API convenience - must match Record
-        // public const int FullNameOrdinal = 0;
-        // public const int IdOrdinal = 1;
-        // public const int LastAccessOrdinal = 2;
-        // public const int TagsOrdinal = 3;
-        // public const int InfoOrdinal = 4;
-        // #endregion
+        #region API convenience
+        public const int FullNameOrdinal = 0;
+        public const int IdOrdinal = 1;
+        public const int LastAccessOrdinal = 2;
+        public const int TagsOrdinal = 3;
+        public const int InfoOrdinal = 4;
         #endregion
 
         #region Properties
@@ -43,6 +45,10 @@ namespace Ephemera.FileFam
         /// <summary>Unique id for internal use.</summary>
         [JsonIgnore]
         public int UID { get; private set; } = -1;
+
+        /// <summary>Convenience property.</summary>
+        [JsonIgnore]
+        public List<string> TagsList { get { return Tags.SplitByToken(" "); } set { Tags = string.Join(" ", value); } }
         #endregion
 
         #region public API
@@ -75,11 +81,11 @@ namespace Ephemera.FileFam
         {
             return ordinal switch
             {
-                0 => FullName.ToString(),
-                1 => Id,
-                2 => LastAccess.ToString(),
-                3 => Tags,
-                4 => Info,
+                FullNameOrdinal => FullName.ToString(),
+                IdOrdinal => Id,
+                LastAccessOrdinal => LastAccess.ToString(),
+                TagsOrdinal => Tags,
+                InfoOrdinal => Info,
                 _ => throw new InvalidOperationException($"ordinal:{ordinal}"),
             };
         }
@@ -97,17 +103,17 @@ namespace Ephemera.FileFam
 
             switch (ordinal)
             {
-                case 0:
+                case FullNameOrdinal:
                     FullName = s;
                     ok = true;
                     break;
 
-                case 1:
+                case IdOrdinal:
                     Id = s;
                     ok = true;
                     break;
 
-                case 2:
+                case LastAccessOrdinal:
                     if (DateTime.TryParse(s, out DateTime dt))
                     {
                         LastAccess = dt;
@@ -115,12 +121,12 @@ namespace Ephemera.FileFam
                     }
                     break;
 
-                case 3:
+                case TagsOrdinal:
                     Tags = s;
                     ok = true;
                     break;
 
-                case 4:
+                case InfoOrdinal:
                     Info = s;
                     ok = true;
                     break;

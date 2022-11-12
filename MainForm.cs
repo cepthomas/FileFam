@@ -13,6 +13,7 @@ using System.Text.Json;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
 
+// TODO Make iterators for lvFiles.Columns/Items etc.
 
 namespace Ephemera.FileFam
 {
@@ -22,10 +23,10 @@ namespace Ephemera.FileFam
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
-        /// <summary>The ff config records.</summary>
+        /// <summary>The ff data list.</summary>
         readonly List<TrackedFile> _trackedFiles = new();
 
-        /// <summary>The ff config filename.</summary>
+        /// <summary>The ff filename.</summary>
         string _fffn = "";
 
         /// <summary>Prevent resize recursion.</summary>
@@ -79,18 +80,11 @@ namespace Ephemera.FileFam
             Location = new(_settings.FormGeometry.X, _settings.FormGeometry.Y);
             Size = new(_settings.FormGeometry.Width, _settings.FormGeometry.Height);
 
-            // The ff file.
-            if (_settings.RecentFiles.Count > 0)
-            {
-                OpenFile(_settings.RecentFiles[0]);
-            }
-            optionsEdit.OptionsChanged += OptionsEdit_OptionsChanged;
-
             // Listview.
-            lv.FullRowSelect = true;
-            lv.GridLines = true;
-            lv.MultiSelect = false;
-            lv.View = View.Details;
+            lvFiles.FullRowSelect = true;
+            lvFiles.GridLines = true;
+            lvFiles.MultiSelect = false;
+            lvFiles.View = View.Details;
             while (_settings.ColumnWidths.Count < TrackedFile.ColumnNames.Length)
             {
                 _settings.ColumnWidths.Add(20);
@@ -98,23 +92,26 @@ namespace Ephemera.FileFam
             for (int i = 0; i < TrackedFile.ColumnNames.Length; i++)
             {
                 string name = TrackedFile.ColumnNames[i];
-                lv.Columns.Add(name, name, _settings.ColumnWidths[i]);
+                lvFiles.Columns.Add(name, name, _settings.ColumnWidths[i]);
             }
-            lv.ContextMenuStrip = new();
-            lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, Lv_Add));
-            lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Delete", null, Lv_Delete));
-            lv.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Pick a File", null, Lv_PickFile));
+            lvFiles.ContextMenuStrip = new();
+            lvFiles.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, LvFiles_Add));
+            lvFiles.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Delete", null, LvFiles_Delete));
+            lvFiles.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Pick File", null, LvFiles_PickFile));
+            lvFiles.ContextMenuStrip.Items.Add(new ToolStripMenuItem("Edit Tags", null, LvFiles_EditTags));
             // All interesting events.
-            lv.Click += Lv_Click;
-            lv.DoubleClick += Lv_DoubleClick;
-            lv.ColumnClick += Lv_ColumnClick;
-            lv.Resize += (_, __) => ResizeLv();
-            lv.ColumnWidthChanged += (_, __) => ResizeLv();
+            lvFiles.Click += LvFiles_Click;
+            lvFiles.DoubleClick += LvFiles_DoubleClick;
+            lvFiles.ColumnClick += LvFiles_ColumnClick;
+            lvFiles.Resize += (_, __) => ResizeLv();
+            lvFiles.ColumnWidthChanged += (_, __) => ResizeLv();
 
             // Misc UI.
             txtEdit.Visible = false;
             txtEdit.Leave += TxtEdit_Leave;
             txtEdit.KeyDown += TxtEdit_KeyDown;
+
+            opedFilterTags.OptionsChanged += OpedFilterTags_OptionsChanged;
 
             // File menu.
             NewMenu.Click += NewMenu_Click;
@@ -127,6 +124,7 @@ namespace Ephemera.FileFam
             SettingsMenu.Click += (_, __) => EditSettings();
             AboutMenu.Click += (_, __) => MiscUtils.ShowReadme("FileFam");
             DebugMenu.Click += (_, __) => MakeFake();
+            DebugMenu.Visible = false;
 
             lblInfo.Text = "";
         }
@@ -137,7 +135,12 @@ namespace Ephemera.FileFam
         /// <param name="e"></param>
         protected override void OnLoad(EventArgs e)
         {
-            ShowRecords(0);
+            // The ff file.
+            if (_settings.RecentFiles.Count > 0)
+            {
+                OpenFile(_settings.RecentFiles[0]);
+            }
+
             ResizeLv();
             UpdateUi();
 
@@ -276,8 +279,8 @@ namespace Ephemera.FileFam
 
                 JsonSerializerOptions opts = new() { AllowTrailingCommas = true };
                 string json = File.ReadAllText(fn);
-                var records = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
-                _trackedFiles.AddRange(records);
+                var tfs = (List<TrackedFile>)JsonSerializer.Deserialize(json, typeof(List<TrackedFile>), opts)!;
+                _trackedFiles.AddRange(tfs);
 
                 _fffn = fn;
                 _dirty = false;
@@ -286,17 +289,16 @@ namespace Ephemera.FileFam
                 // Get all tags in ff ordered by frequency.
                 Dictionary<string, int> ffTags = new();
                 _trackedFiles
-                    .ForEach(f => f.Tags.SplitByToken(" ")
+                    .ForEach(f => f.TagsList
                     .ForEach(t => ffTags[t] = ffTags.ContainsKey(t) ? ffTags[t] + 1 : 1));
 
-                List<string> allTagNames = new(ffTags.Keys);
-                Dictionary<string, bool> allTags = new();
+                Dictionary<string, bool> filters = new();
                 ffTags
                     .OrderByDescending(t => t.Value)
-                    .ForEach(t => allTags.Add(t.Key, _settings.CurrentTags.Contains(t.Key)));
-                optionsEdit.Options = allTags;
+                    .ForEach(t => filters.Add(t.Key, _settings.CurrentTags.Contains(t.Key)));
+                opedFilterTags.Options = filters;
 
-                ShowRecords(-1);
+                ShowRecords(0);// first
             }
             catch (Exception ex)
             {
@@ -395,49 +397,50 @@ namespace Ephemera.FileFam
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void OptionsEdit_OptionsChanged(object? sender, EventArgs e)
+        void OpedFilterTags_OptionsChanged(object? sender, EventArgs e)
         {
-            ShowRecords(-1);
+            ShowRecords(0); // first
         }
 
         /// <summary>
-        /// Add a new record.
+        /// Add a new entry.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Lv_Add(object? sender, EventArgs e)
+        void LvFiles_Add(object? sender, EventArgs e)
         {
-            var rec = new TrackedFile();
-            _trackedFiles.Add(rec);
+            var tf = new TrackedFile();
+            _trackedFiles.Add(tf);
             _dirty = true;
 
-            ShowRecords(rec.UID);
+            ShowRecords(tf.UID);// current
         }
 
         /// <summary>
-        /// Remove current record.
+        /// Remove current entry.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Lv_Delete(object? sender, EventArgs e)
+        void LvFiles_Delete(object? sender, EventArgs e)
         {
-            if (lv.SelectedIndices.Count > 0)
+            if (lvFiles.SelectedIndices.Count > 0)
             {
-                // Get the next item.
-                int nextuid = -1; // default
-                int row = lv.SelectedIndices[0];
-                if (lv.Items.Count > row + 1)
+                // Get an adjacent item first.
+                int adjuid = 0; // default
+                int row = lvFiles.SelectedIndices[0];
+
+                if (row > 0)
                 {
-                    var nextrec = lv.Items[row + 1].Tag as TrackedFile;
-                    nextuid = nextrec!.UID;
+                    var nexttf = lvFiles.Items[row - 1].Tag as TrackedFile;
+                    adjuid = nexttf!.UID;
                 }
 
-                // Process selection.
-                var rec = lv.SelectedItems[0].Tag as TrackedFile;
-                _trackedFiles.Remove(rec!);
+                // Process the selection.
+                var tf = Selected();
+                _trackedFiles.Remove(tf);
                 _dirty = true;
 
-                ShowRecords(nextuid);
+                ShowRecords(adjuid);// adjacent
             }
         }
 
@@ -446,12 +449,10 @@ namespace Ephemera.FileFam
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Lv_PickFile(object? sender, EventArgs e)
+        void LvFiles_PickFile(object? sender, EventArgs e)
         {
-            // Collect filters.
+            // Collect filters. Like "Midi Files|*.sty;*.pcs;*.sst;*.prs|Style Files|*.sty;*.prs"
             List<string> filters = new();
-
-            // "Midi,sty,pcs,sst,prs" "Style,sty,prs"  >>> "Midi Files|*.sty;*.pcs;*.sst;*.prs|Style Files|*.sty;*.prs"
 
             try
             {
@@ -460,8 +461,7 @@ namespace Ephemera.FileFam
                     filters.Add($"{t.CategoryName} Files");
                     string exts = string.Join(";*.", t.Extensions).Remove(0, 1);
                     filters.Add(exts);
-                }
-                );
+                });
 
                 filters.Add("All Files");
                 filters.Add("*.*");
@@ -470,16 +470,16 @@ namespace Ephemera.FileFam
                 using OpenFileDialog openDlg = new()
                 {
                     Filter = fs,
-                    Title = "Pick a file"
+                    Title = "Pick File"
                 };
 
                 if (openDlg.ShowDialog() == DialogResult.OK)
                 {
                     // Save selection.
-                    var rec = lv.SelectedItems[0].Tag as TrackedFile;
-                    rec!.FullName = openDlg.FileName;
+                    var tf = Selected();
+                    tf.FullName = openDlg.FileName;
 
-                    ShowRecords(rec.UID);
+                    ShowRecords(tf.UID);// current
                 }
             }
             catch (Exception ex)
@@ -489,15 +489,63 @@ namespace Ephemera.FileFam
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void LvFiles_EditTags(object? sender, EventArgs e)
+        {
+            var tf = Selected();
+            var fileTags = tf.TagsList;
+            Dictionary<string, bool> filters = new();
+
+            opedFilterTags.Options.ForEach(o => filters.Add(o.Key, fileTags.Contains(o.Key)));
+
+            OptionsEditor opedTags = new()
+            {
+                AllowEdit = true,
+                Dock = DockStyle.Fill,
+                Options = filters
+            };
+            opedTags.OptionsChanged += (_, __) => ShowMessage($"Options changed:{opedTags.Options.Where(o => o.Value == true).Count()}");
+
+            using Form f = new()
+            {
+                Text = "Edit Tags",
+                Location = Cursor.Position,
+                StartPosition = FormStartPosition.Manual,
+                FormBorderStyle = FormBorderStyle.FixedToolWindow,
+                ShowIcon = false,
+                ShowInTaskbar = false
+            };
+            f.ClientSize = new(150, 300); // do this after constructor.
+            f.Controls.Add(opedTags);
+
+            var dr = f.ShowDialog();
+
+            // Update results.
+            List<string> ls = new();
+            opedTags.Options
+                .Where(o => o.Value)
+                .ForEach(o => ls.Add(o.Key));
+
+            tf.TagsList = ls;
+            _dirty = true;
+
+            ShowRecords(tf.UID);// current
+        }
+
+        /// <summary>
         /// Does sorting.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Lv_ColumnClick(object? sender, ColumnClickEventArgs e)
+        void LvFiles_ColumnClick(object? sender, ColumnClickEventArgs e)
         {
+            var tf = Selected();
             _selColumn = e.Column;
 
-            var colsel = lv.Columns[_selColumn];
+            var colsel = lvFiles.Columns[_selColumn];
             var name = colsel.Name;
 
             // Current sort.
@@ -507,15 +555,13 @@ namespace Ephemera.FileFam
             _sortOrder = cop == ASC ? SortOrder.Descending : SortOrder.Ascending;
 
             // Reset all column headers.
-            for (int i = 0; i < lv.Columns.Count; i++)
+            for (int i = 0; i < lvFiles.Columns.Count; i++)
             {
-                var colhdr = lv.Columns[i];
+                var colhdr = lvFiles.Columns[i];
                 colhdr.Text = colhdr.Name;
             }
 
-            var seluid = lv.SelectedItems.Count > 0 ? (lv.SelectedItems[0].Tag as TrackedFile)!.UID : -1;
-
-            ShowRecords(seluid);
+            ShowRecords(tf.UID);// current
 
             // Update selected col text.
             colsel.Text = $"{name} {(_sortOrder == SortOrder.Ascending ? ASC : DESC)}";
@@ -526,10 +572,10 @@ namespace Ephemera.FileFam
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Lv_DoubleClick(object? sender, EventArgs e)
+        void LvFiles_DoubleClick(object? sender, EventArgs e)
         {
-            var tf = lv.SelectedItems[0].Tag as TrackedFile;
-            var fn = tf!.FullName;
+            var tf = Selected();
+            var fn = tf.FullName;
 
             try
             {
@@ -539,7 +585,7 @@ namespace Ephemera.FileFam
                 }
 
                 // Dig out the file type particulars.
-                var ext = Path.GetExtension(tf!.FullName).Replace(".", "");
+                var ext = Path.GetExtension(tf.FullName).Replace(".", "");
                 FileCategory? fc = _settings.TrackedFileTypes.FirstOrDefault(fc => fc.Extensions.Contains(ext));
 
                 if (fc is null)
@@ -557,7 +603,7 @@ namespace Ephemera.FileFam
                 tf.LastAccess = DateTime.Now;
                 _dirty = true;
 
-                ShowRecords(tf.UID);
+                ShowRecords(tf.UID);// current
             }
             catch (Exception ex)
             {
@@ -570,18 +616,17 @@ namespace Ephemera.FileFam
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Lv_Click(object? sender, EventArgs e)
+        void LvFiles_Click(object? sender, EventArgs e)
         {
             if (ModifierKeys.HasFlag(Keys.Control))
             {
                 var pt = PointToClient(MousePosition);
-                var hitTestInfo = lv.HitTest(pt);
-                var rec = hitTestInfo.Item.Tag as TrackedFile;
-                var subItem = hitTestInfo.SubItem;
-                _selColumn = hitTestInfo.Item.SubItems.IndexOf(subItem);
+                var hitTestInfo = lvFiles.HitTest(pt);
+                var tf = hitTestInfo.Item.Tag as TrackedFile;
+                _selColumn = hitTestInfo.Item.SubItems.IndexOf(hitTestInfo.SubItem);
 
                 // Show the text to edit.
-                string lastContent = rec!.StringAt(_selColumn);
+                string lastContent = tf!.StringAt(_selColumn);
 
                 if (lastContent.Length > 35)
                 {
@@ -615,13 +660,13 @@ namespace Ephemera.FileFam
             {
                 case Keys.Return:
                     // Indicates validate and save.
-                    lv.Focus(); // force Leave
+                    lvFiles.Focus(); // force Leave
                     break;
 
                 case Keys.Escape:
                     // Indicates cancel.
                     txtEdit.Text = "";
-                    lv.Focus(); // force Leave
+                    lvFiles.Focus(); // force Leave
                     break;
 
                 default:
@@ -640,13 +685,13 @@ namespace Ephemera.FileFam
             if (txtEdit.Text != "")
             {
                 // Save the contents.
-                var record = lv.SelectedItems[0].Tag as TrackedFile;
-                bool ok = record!.Parse(txtEdit.Text, _selColumn);
+                var tf = Selected();
+                bool ok = tf.Parse(txtEdit.Text, _selColumn);
 
                 if (ok)
                 {
                     _dirty = true;
-                    ShowRecords(record.UID);
+                    ShowRecords(tf.UID);// current
                 }
             }
             // else dump
@@ -659,60 +704,56 @@ namespace Ephemera.FileFam
         /// <summary>
         /// Sort and filter then update the listview.
         /// </summary>
-        /// <param name="seluid">Put the focus on this record after showing. -1 sort of means ignore.</param>
+        /// <param name="seluid">Put the focus on this entry after showing. -1 sort of means ignore.</param>
         void ShowRecords(int seluid)
         {
-            //IEnumerable<TrackedFile> sorted;
-
-            // Filter by tags.
+            // Filter by tags. Get current filter selections.
             HashSet<string> filterTags = new();
-            optionsEdit.Options
+            opedFilterTags.Options
                 .Where(o => o.Value == true)
                 .ForEach(o => filterTags.Add(o.Key));
 
+            // Get file tags.
             var qry = filterTags.Count > 0 ?
                 _trackedFiles
-                .Where(rec => rec.Tags.SplitByToken(" ")
+                .Where(tf => tf.TagsList
                 .Intersect(filterTags)
                 .Any())
                 :
                 _trackedFiles;
 
-            // TODO also filter by other columns.
+            // TODO also filter by other columns?
 
             // Sort by column and direction.
             var sorted = _selColumn switch
             {
-                0 => qry.OrderBy(r => r.FullName),
-                1 => qry.OrderBy(r => r.Id),
-                2 => qry.OrderBy(r => r.LastAccess),
-                3 => qry.OrderBy(r => r.Tags),
-                4 => qry.OrderBy(r => r.Info),
+                TrackedFile.FullNameOrdinal => qry.OrderBy(r => r.FullName),
+                TrackedFile.IdOrdinal => qry.OrderBy(r => r.Id),
+                TrackedFile.LastAccessOrdinal => qry.OrderBy(r => r.LastAccess),
+                TrackedFile.TagsOrdinal => qry.OrderBy(r => r.Tags),
+                TrackedFile.InfoOrdinal => qry.OrderBy(r => r.Info),
                 _ => qry // no sort - use raw
             };
             var sortedOrdered = _sortOrder == SortOrder.Descending ? sorted.Reverse() : sorted;
 
             // Show the data.
-            lv.SuspendLayout();
-            lv.Items.Clear();
-            foreach (var d in sortedOrdered)
-            {
-                var item = new ListViewItem(d.ValueStrings) { Tag = d };
-                lv.Items.Add(item);
-            }
-            lv.ResumeLayout();
+            lvFiles.SuspendLayout();
+            lvFiles.Items.Clear();
+            sortedOrdered.ForEach(f => { lvFiles.Items.Add(new ListViewItem(f.ValueStrings) { Tag = f }); });
+            lvFiles.ResumeLayout();
 
-            // Select the requested record. TODO optimize?
-            for (int i = 0; i < lv.Items.Count; i++)
+            // Select the requested entry. TODO optimize?
+            for (int i = 0; i < lvFiles.Items.Count; i++)
             {
-                if ((lv.Items[i].Tag as TrackedFile)!.UID == seluid)
+                var tf = lvFiles.Items[i].Tag as TrackedFile;
+                if (tf!.UID == seluid)
                 {
-                    lv.Items[i].Selected = true;
+                    lvFiles.Items[i].Selected = true;
                     break;
                 }
             }
 
-            lblInfo.Text = $"{lv.Items.Count} records";
+            lblInfo.Text = $"{lvFiles.Items.Count} entries";
         }
 
         /// <summary>
@@ -725,11 +766,11 @@ namespace Ephemera.FileFam
                 _resizing = true;
 
                 int tw = 0;
-                for (int i = 0; i < lv.Columns.Count - 1; i++)
+                for (int i = 0; i < lvFiles.Columns.Count - 1; i++)
                 {
-                    tw += lv.Columns[i].Width;
+                    tw += lvFiles.Columns[i].Width;
                 }
-                lv.Columns[^1].Width = lv.ClientRectangle.Width - tw;
+                lvFiles.Columns[^1].Width = lvFiles.ClientRectangle.Width - tw;
                 _resizing = false;
             }
         }
@@ -741,6 +782,15 @@ namespace Ephemera.FileFam
         void ShowMessage(string msg)
         {
             tvLog.AppendLine($"{msg}");
+        }
+
+        /// <summary>
+        /// Get the current selectd record.
+        /// </summary>
+        /// <returns></returns>
+        TrackedFile Selected()
+        {
+            return (lvFiles.SelectedItems[0].Tag as TrackedFile)!;
         }
         #endregion
 
@@ -764,21 +814,17 @@ namespace Ephemera.FileFam
 
             // Column widths.
             _settings.ColumnWidths.Clear();
-            for (int i = 0; i < lv.Columns.Count; i++)
+            for (int i = 0; i < lvFiles.Columns.Count; i++)
             {
-                var col = lv.Columns[i];
+                var col = lvFiles.Columns[i];
                 _settings.ColumnWidths.Add(col.Width);
             }
 
             // Selected tags.
             _settings.CurrentTags.Clear();
-            foreach (var kv in optionsEdit.Options)
-            {
-                if (kv.Value)
-                {
-                    _settings.CurrentTags.Add(kv.Key);
-                }
-            }
+            opedFilterTags.Options
+                .Where(kv => kv.Value)
+                .ForEach(o => _settings.CurrentTags.Add(o.Key));
 
             _settings.Save();
         }

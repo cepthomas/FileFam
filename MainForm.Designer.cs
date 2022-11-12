@@ -16,8 +16,8 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FileFam));
-            this.optionsEdit = new Ephemera.NBagOfUis.OptionsEditor();
-            this.lv = new System.Windows.Forms.ListView();
+            this.opedFilterTags = new Ephemera.NBagOfUis.OptionsEditor();
+            this.lvFiles = new System.Windows.Forms.ListView();
             this.txtEdit = new System.Windows.Forms.TextBox();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.lblInfo = new System.Windows.Forms.ToolStripStatusLabel();
@@ -33,37 +33,38 @@
             this.SettingsMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.AboutMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.DebugMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.label1 = new System.Windows.Forms.Label();
             this.statusStrip.SuspendLayout();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
-            // optionsEdit
+            // opedFilterTags
             // 
-            this.optionsEdit.AllowEdit = true;
-            this.optionsEdit.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.opedFilterTags.AllowEdit = true;
+            this.opedFilterTags.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.optionsEdit.BackColor = System.Drawing.Color.Azure;
-            this.optionsEdit.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.optionsEdit.Location = new System.Drawing.Point(1083, 35);
-            this.optionsEdit.Name = "optionsEdit";
-            this.optionsEdit.Size = new System.Drawing.Size(125, 438);
-            this.optionsEdit.TabIndex = 95;
+            this.opedFilterTags.BackColor = System.Drawing.Color.Azure;
+            this.opedFilterTags.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.opedFilterTags.Location = new System.Drawing.Point(1083, 58);
+            this.opedFilterTags.Name = "opedFilterTags";
+            this.opedFilterTags.Size = new System.Drawing.Size(125, 259);
+            this.opedFilterTags.TabIndex = 95;
             // 
-            // lv
+            // lvFiles
             // 
-            this.lv.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.lvFiles.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.lv.Location = new System.Drawing.Point(12, 35);
-            this.lv.Name = "lv";
-            this.lv.Size = new System.Drawing.Size(1065, 438);
-            this.lv.TabIndex = 93;
-            this.lv.UseCompatibleStateImageBehavior = false;
+            this.lvFiles.Location = new System.Drawing.Point(12, 35);
+            this.lvFiles.Name = "lvFiles";
+            this.lvFiles.Size = new System.Drawing.Size(1065, 438);
+            this.lvFiles.TabIndex = 93;
+            this.lvFiles.UseCompatibleStateImageBehavior = false;
             // 
             // txtEdit
             // 
             this.txtEdit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtEdit.Location = new System.Drawing.Point(1083, 536);
+            this.txtEdit.Location = new System.Drawing.Point(1083, 583);
             this.txtEdit.Name = "txtEdit";
             this.txtEdit.Size = new System.Drawing.Size(125, 27);
             this.txtEdit.TabIndex = 94;
@@ -182,14 +183,24 @@
             this.DebugMenu.Size = new System.Drawing.Size(145, 26);
             this.DebugMenu.Text = "Fake";
             // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(1083, 35);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(75, 20);
+            this.label1.TabIndex = 98;
+            this.label1.Text = "Filter Tags";
+            // 
             // FileFam
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1220, 639);
-            this.Controls.Add(this.optionsEdit);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.opedFilterTags);
             this.Controls.Add(this.txtEdit);
-            this.Controls.Add(this.lv);
+            this.Controls.Add(this.lvFiles);
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.menuStrip);
             this.Controls.Add(this.tvLog);
@@ -225,9 +236,9 @@
         private System.Windows.Forms.ToolStripStatusLabel lblInfo;
         private NBagOfUis.TextViewer tvLog;
 
-        private System.Windows.Forms.ListView lv;
+        private System.Windows.Forms.ListView lvFiles;
         private System.Windows.Forms.TextBox txtEdit;
-        private Ephemera.NBagOfUis.OptionsEditor optionsEdit;
+        private Ephemera.NBagOfUis.OptionsEditor opedFilterTags;
         private System.Windows.Forms.MenuStrip menuStrip;
 
         private System.Windows.Forms.ToolStripMenuItem FileMenu;
@@ -241,5 +252,6 @@
         private System.Windows.Forms.ToolStripMenuItem SaveAsMenu;
         private System.Windows.Forms.ToolStripMenuItem RecentMenu;
         private System.Windows.Forms.ToolStripMenuItem NewMenu;
+        private System.Windows.Forms.Label label1;
     }
 }
